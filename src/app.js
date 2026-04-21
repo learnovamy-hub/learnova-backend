@@ -1,0 +1,86 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// Import routes
+import authRoutes from './routes/auth.js';
+import lessonRoutes from './routes/lessons.js';
+import quizRoutes from './routes/quizzes.js';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// ============================================================================
+// MIDDLEWARE
+// ============================================================================
+
+// CORS
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+}));
+
+// Body parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
+// ============================================================================
+// HEALTH CHECK
+// ============================================================================
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ============================================================================
+// ROUTES
+// ============================================================================
+
+// Auth routes
+app.use('/api/auth', authRoutes);
+
+// Lesson routes
+app.use('/api/lessons', lessonRoutes);
+
+// Quiz routes
+app.use('/api/quizzes', quizRoutes);
+
+// ============================================================================
+// 404 HANDLER
+// ============================================================================
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// ============================================================================
+// ERROR HANDLER
+// ============================================================================
+
+app.use((error, req, res, next) => {
+  console.error('Error:', error);
+  res.status(error.status || 500).json({
+    error: error.message || 'Internal server error'
+  });
+});
+
+// ============================================================================
+// START SERVER
+// ============================================================================
+
+app.listen(PORT, () => {
+  console.log(`✅ Learnova Backend running on port ${PORT}`);
+  console.log(`📡 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔐 API: http://localhost:${PORT}/api`);
+});
+
+export default app;

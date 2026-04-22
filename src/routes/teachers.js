@@ -1,10 +1,9 @@
 import express from 'express';
 import { authMiddleware } from '../config/auth.js';
 import { getTeacherByUserId } from '../config/database.js';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../config/database.js';
 
 const router = express.Router();
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 router.get('/profile', authMiddleware, async (req, res) => {
   try {

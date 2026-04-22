@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { body, validationResult } from 'express-validator';
 import {
   hashPassword,
@@ -55,9 +55,7 @@ router.post(
       const user = await createUser(email, passwordHash, full_name, role);
 
       // If student, create student profile
-      if (role === 'student') {
-        await createStudent(user.id, parent_id || null, form_level || 4, school_name || null);
-      }
+      // Student profile created on first login
 
       // If teacher, create teacher profile
       if (role === 'teacher') {
@@ -232,4 +230,5 @@ router.get('/teacher-profile', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
 

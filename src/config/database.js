@@ -1,4 +1,4 @@
-﻿import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -70,12 +70,7 @@ export async function getUserById(id) {
 export async function createStudent(userId, parentId, formLevel, schoolName) {
   const { data, error } = await supabase
     .from('students')
-    .insert([{
-      user_id: userId,
-      parent_id: parentId,
-      form_level: formLevel,
-      school_name: schoolName
-    }])
+    .insert([{ user_id: userId, parent_email: parentId }])
     .select()
     .single();
 
@@ -449,4 +444,5 @@ export async function saveResumeState(userId, role, payload) {
 
   return true;
 }
+
 

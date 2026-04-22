@@ -9,6 +9,7 @@ dotenv.config();
 import authRoutes from './routes/auth.js';
 import lessonRoutes from './routes/lessons.js';
 import quizRoutes from './routes/quizzes.js';
+import teacherRoutes from './routes/teachers.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,7 +54,6 @@ app.use('/api/lessons', lessonRoutes);
 
 // Quiz routes
 app.use('/api/quizzes', quizRoutes);
-import teacherRoutes from './routes/teachers.js';
 app.use('/api/teacher', teacherRoutes);
 
 // ============================================================================
@@ -86,4 +86,6 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
+
 

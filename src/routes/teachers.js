@@ -20,10 +20,17 @@ router.post('/profile', authMiddleware, async (req, res) => {
     const { school_name, subjects, years_experience, qualifications, teaching_philosophy } = req.body;
     const teacher = await getTeacherByUserId(req.user.userId);
     if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
-    const { data, error } = await supabase.from('teachers').update({ school_name, subjects, years_experience, qualifications, teaching_philosophy, onboarding_complete: true }).eq('user_id', req.user.userId).select().single();
+    const { data, error } = await supabase.from('teachers').update({
+      school: school_name,
+      subject: Array.isArray(subjects) ? subjects.join(',') : subjects,
+      experience_years: years_experience,
+      qualifications: qualifications,
+      bio: teaching_philosophy
+    }).eq('user_id', req.user.userId).select().single();
     if (error) throw error;
     res.json({ message: 'Profile updated', teacher: data });
   } catch (err) {
+    console.error('POST teacher profile error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

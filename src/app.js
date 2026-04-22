@@ -53,6 +53,8 @@ app.use('/api/lessons', lessonRoutes);
 
 // Quiz routes
 app.use('/api/quizzes', quizRoutes);
+import teacherRoutes from './routes/teachers.js';
+app.use('/api/teacher', teacherRoutes);
 
 // ============================================================================
 // 404 HANDLER
@@ -84,3 +86,4 @@ app.listen(PORT, () => {
 });
 
 export default app;
+

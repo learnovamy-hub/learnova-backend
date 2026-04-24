@@ -96,4 +96,10 @@ router.get('/seed-quizzes/status', async (req, res) => {
   }
 });
 
+
+
+
+router.post('/seed-faqs',async(req,res)=>{const{subject:fs2,form=5}=req.query;res.json({message:'FAQ seeding started',status:'running'});const T={'Mathematics':['Progressions','Linear Law','Integration','Vectors','Trigonometric Functions','Probability','Probability Distributions'],'Add Maths':['Progressions','Linear Law','Integration','Vectors','Probability','Kinematics'],'Physics':['Waves','Electricity','Electromagnetism','Electronics','Nuclear Physics'],'Chemistry':['Thermochemistry','Electrochemistry','Synthetic Polymers','Rate of Reaction'],'Biology':['Transport in Humans','Reproduction','Growth','Inheritance','Variation'],'English':['Essay Writing','Literature','Grammar'],'Bahasa Malaysia':['Penulisan','Komsas','Tatabahasa'],'Sejarah':['Malaysia dalam Era Globalisasi','Pembangunan Negara']};try{const subs=fs2?[fs2]:Object.keys(T);let tot=0;for(const sub of subs){for(const top of(T[sub]||[])){try{const{data:ex}=await supabase.from('faq_cache').select('id').eq('subject',sub).eq('topic',top).eq('form_level',String(form)).limit(1);if(ex&&ex.length>0){console.log('[FAQ] Skip:',top);continue;}console.log('[FAQ] Gen:',sub,'F'+form,top);const p='Malaysian SPM '+sub+' Form '+form+' teacher. Generate 8 student FAQ for topic: '+top+'. Return ONLY JSON array: [{question,answer,topic,subject}]';const rv=await anthropic.messages.create({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:p}]});const faqs=JSON.parse(rv.content[0].text.trim().replace(/`json|`/g,'').trim());if(!Array.isArray(faqs))continue;const rows=faqs.map(f=>({subject:sub,topic:top,question:f.question,answer:f.answer,form_level:String(form),source:'claude_ai',related_questions:[]}));await supabase.from('faq_cache').upsert(rows,{onConflict:'subject,question',ignoreDuplicates:true});tot+=faqs.length;console.log('[FAQ] Done:',top,faqs.length);await new Promise(r=>setTimeout(r,800));}catch(e){console.error('[FAQ] Err:',top,e.message);}}}console.log('[FAQ] Total:',tot);}catch(e){console.error('[FAQ] Fatal:',e);}});
 export default router;
+
+

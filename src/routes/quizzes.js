@@ -43,7 +43,7 @@ router.get('/:quizId', async (req, res) => {
     }
 
     const { data: questions, error: questionsError } = await supabase
-      .from('quiz_questions').select('id, question, type, options, correct_answer, explanation, difficulty_level')
+      .from('quiz_questions').select('id, question, type, options, correct_answer, explanation')
       .eq('quiz_id', req.params.quizId)
       .order('question_number', { ascending: true });
 
@@ -251,6 +251,7 @@ router.get('/attempts/:attemptId', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
 
 
 

@@ -250,7 +250,23 @@ router.get('/attempts/:attemptId', authMiddleware, async (req, res) => {
   }
 });
 
+
+router.post('/:quizId/submit', authMiddleware, async (req, res) => {
+  try {
+    const { answers } = req.body;
+    const { data: questions, error } = await supabase.from('quiz_questions').select('id, correct_answer').eq('quiz_id', req.params.quizId);
+    if (error) throw error;
+    if (!questions || questions.length === 0) return res.status(404).json({ error: 'No questions found' });
+    let correct = 0;
+    const feedback = questions.map(q => { const isCorrect = answers[q.id] === q.correct_answer; if (isCorrect) correct++; return { question_id: q.id, correct: isCorrect, correct_answer: q.correct_answer }; });
+    const total = questions.length;
+    const percentage = Math.round((correct / total) * 100);
+    res.json({ score: correct, total, percentage, feedback });
+  } catch (err) { console.error('Submit error:', err); res.status(500).json({ error: err.message }); }
+});
+
 export default router;
+
 
 
 

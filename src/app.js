@@ -12,6 +12,7 @@ import quizRoutes from './routes/quizzes.js';
 import teacherRoutes from './routes/teachers.js';
 import aiRoutes from './routes/ai.js';
 import studentRoutes from './routes/students.js';
+import auditRoutes from './routes/audit.js';
 import adminRoutes from './routes/admin.js';
 
 const app = express();
@@ -60,6 +61,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/audit', auditRoutes);
 app.use('/api/admin', adminRoutes);
 
 // ============================================================================
@@ -92,6 +94,7 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
 
 
 

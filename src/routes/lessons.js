@@ -116,4 +116,29 @@ router.post(
   }
 );
 
+// Add this route to lessons.js BEFORE export default router;
+// GET /api/lessons?subject=Mathematics&form_level=4
+router.get('/', async (req, res) => {
+  try {
+    const { subject, form_level = 4 } = req.query;
+
+    let query = supabase
+      .from('lessons')
+      .select('id, title, topic, subject, form_level, introduction, content, worked_examples, common_mistakes, summary, learning_objectives, status, created_at')
+      .eq('status', 'published')
+      .order('created_at', { ascending: true });
+
+    if (subject) query = query.eq('subject', subject);
+    if (form_level) query = query.eq('form_level', parseInt(form_level));
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('Lessons fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
+

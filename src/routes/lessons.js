@@ -1,4 +1,5 @@
 import express from 'express';
+import { supabase } from '../config/database.js';
 import { authMiddleware, studentMiddleware } from '../config/auth.js';
 import {
   getAllTopics,
@@ -141,4 +142,5 @@ router.get('/', async (req, res) => {
 });
 
 export default router;
+
 

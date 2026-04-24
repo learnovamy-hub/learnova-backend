@@ -32,6 +32,14 @@ function guessTopic(question) {
     'progression': 'Progressions',
     'vector': 'Vectors',
     'trigonometric': 'Trigonometric Functions',
+    'soh cah toa': 'Trigonometric Functions',
+    'soh': 'Trigonometric Functions',
+    'sine': 'Trigonometric Functions',
+    'cosine': 'Trigonometric Functions',
+    'tangent': 'Trigonometric Functions',
+    'sin': 'Trigonometric Functions',
+    'cos': 'Trigonometric Functions',
+    'tan': 'Trigonometric Functions',
     'probability': 'Probability',
     'integration': 'Integration',
     'differentiation': 'Differentiation',
@@ -197,3 +205,4 @@ router.post('/ask', async (req, res) => {
 });
 
 export default router;
+

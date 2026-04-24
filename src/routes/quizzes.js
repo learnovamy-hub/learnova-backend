@@ -35,7 +35,7 @@ router.get('/:quizId', async (req, res) => {
       .from('quizzes')
       .select('*')
       .eq('id', req.params.quizId)
-      .eq('status', 'published')
+      .eq('is_published', true)
       .single();
 
     if (quizError || !quiz) {
@@ -251,5 +251,6 @@ router.get('/attempts/:attemptId', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
 
 

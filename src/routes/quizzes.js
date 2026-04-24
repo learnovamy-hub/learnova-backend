@@ -9,6 +9,22 @@ import {
 
 const router = express.Router();
 
+// GET /api/quizzes/list/:subject
+router.get('/list/:subject', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('quizzes')
+      .select('id, title, topic, subject, difficulty, total_questions, is_published')
+      .eq('subject', req.params.subject)
+      .eq('is_published', true)
+      .order('topic', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /**
  * GET /api/quizzes/:quizId
  * Get quiz questions
@@ -27,8 +43,7 @@ router.get('/:quizId', async (req, res) => {
     }
 
     const { data: questions, error: questionsError } = await supabase
-      .from('questions')
-      .select('id, question_number, question_text, question_type, option_a, option_b, option_c, option_d, difficulty_level, learning_objective')
+      .from('quiz_questions').select('id, question, type, options, correct_answer, explanation, difficulty_level')
       .eq('quiz_id', req.params.quizId)
       .order('question_number', { ascending: true });
 
@@ -130,8 +145,7 @@ router.post(
 
       // Get all questions for the quiz
       const { data: questions, error: questionsError } = await supabase
-        .from('questions')
-        .select('id, correct_answer')
+        .from('quiz_questions').select('id, correct_answer')
         .eq('quiz_id', attempt.quiz_id);
 
       if (questionsError) throw questionsError;
@@ -237,3 +251,5 @@ router.get('/attempts/:attemptId', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
+

@@ -55,6 +55,13 @@ router.post(
       const user = await createUser(email, passwordHash, full_name, role);
 
       // If student, create student profile
+      // Auto-link to parent if parent_email provided
+      if (role === 'student' && parent_email) {
+        const { data: parentUser } = await supabase.from('users').select('id').eq('email', parent_email.toLowerCase()).eq('role', 'parent').maybeSingle();
+        if (parentUser) {
+          await supabase.from('parent_student_links').upsert([{ parent_id: parentUser.id, student_id: user.id, status: 'pending' }], { onConflict: 'parent_id,student_id', ignoreDuplicates: true });
+        }
+      }
       // Student profile created on first login
 
       // If teacher, create teacher profile
@@ -230,5 +237,6 @@ router.get('/teacher-profile', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
 
 

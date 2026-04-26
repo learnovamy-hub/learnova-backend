@@ -15,6 +15,7 @@ import studentRoutes from './routes/students.js';
 import auditRoutes from './routes/audit.js';
 import tutorRoutes from './routes/tutor.js';
 import sessionRoutes from './routes/sessions.js';
+import parentRoutes from './routes/parent.js';
 import adminRoutes from './routes/admin.js';
 
 const app = express();
@@ -66,6 +67,7 @@ app.use('/api/student', studentRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/tutor', tutorRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/parent', parentRoutes);
 app.use('/api/admin', adminRoutes);
 
 // ============================================================================
@@ -98,6 +100,7 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
 
 
 

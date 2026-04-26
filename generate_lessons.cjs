@@ -7,16 +7,15 @@ const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const CHAPTERS = [
-  { num: 1, topic: 'Quadratic Functions and Equations', pages: [1, 32] },
-  { num: 2, topic: 'Number Bases', pages: [33, 53] },
-  { num: 3, topic: 'Mathematical Logic', pages: [54, 93] },
-  { num: 4, topic: 'Set Operations', pages: [94, 127] },
-  { num: 5, topic: 'Network and Graphs', pages: [128, 153] },
-  { num: 6, topic: 'Linear Inequalities in Two Variables', pages: [154, 175] },
-  { num: 7, topic: 'Motion Graphs', pages: [176, 195] },
-  { num: 8, topic: 'Data Dispersion', pages: [196, 220] },
-  { num: 9, topic: 'Probability of Combined Events', pages: [221, 250] },
-  { num: 10, topic: 'Consumer Mathematics', pages: [251, 321] },
+  { num: 1, topic: 'Variation', pages: [1, 30] },
+  { num: 2, topic: 'Matrices', pages: [31, 70] },
+  { num: 3, topic: 'Consumer Mathematics Insurance', pages: [71, 100] },
+  { num: 4, topic: 'Probability Distribution', pages: [101, 140] },
+  { num: 5, topic: 'Trigonometric Functions', pages: [141, 180] },
+  { num: 6, topic: 'Angles Elevation and Depression', pages: [181, 200] },
+  { num: 7, topic: 'Plans and Elevations', pages: [201, 220] },
+  { num: 8, topic: 'Measures of Dispersion', pages: [221, 250] },
+  { num: 9, topic: 'Mathematical Modelling', pages: [251, 276] },
 ];
 
 async function extractText(pdfPath, startPage, endPage) {
@@ -109,6 +108,7 @@ Return ONLY this JSON with no markdown:
 }
 
 main().catch(console.error);
+
 
 
 

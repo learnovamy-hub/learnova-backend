@@ -173,30 +173,3 @@ router.get('/topics', async (req, res) => {
 });
 
 export default router;
-
-async function classify(message, topic, subject) {
-  const msg = message.toLowerCase().trim();
-  const skip = ['yes','no','ok','okay','continue','next','a','b','c','d','faham','sure','got it'];
-  if (skip.includes(msg) || msg.length < 4) return 'normal';
-  const lessonWords = ['understand','explain','how','what','why','formula','solve','calculate','find','confused','help','example','practice'];
-  if (lessonWords.some(w => msg.includes(w))) return 'normal';
-  try {
-    const r = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, messages: [{ role: 'user', content: 'Student learning ' + subject + ': ' + topic + '. Says: "' + message + '"\nONE word only: normal, offtopic, celebrity, giveup, tired, avoid, nonsense' }] });
-    const result = r.content[0].text.trim().toLowerCase().split(/\s+/)[0];
-    return ['normal','offtopic','celebrity','giveup','tired','avoid','nonsense'].includes(result) ? result : 'normal';
-  } catch(e) { return 'normal'; }
-}
-
-function fuzzyMatch(q, faq) {
-  const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  const matches = words.filter(w => faq.toLowerCase().includes(w));
-  return matches.length / Math.max(words.length, 1);
-}
-
-async function checkFAQ(question, subject) {
-  const { data: faqs } = await supabase.from('faq_cache').select('question, answer, topic').eq('subject', subject).limit(300);
-  let best = null, bestScore = 0;
-  for (const faq of (faqs || [])) { const score = fuzzyMatch(question, faq.question); if (score > bestScore && score > 0.45) { bestScore = score; best = faq; } }
-  return best;
-}
-

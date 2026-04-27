@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
@@ -17,6 +17,7 @@ import tutorRoutes from './routes/tutor.js';
 import sessionRoutes from './routes/sessions.js';
 import parentRoutes from './routes/parent.js';
 import adminRoutes from './routes/admin.js';
+import workspaceRoutes from './routes/workspace.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -69,6 +70,7 @@ app.use('/api/tutor', tutorRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/workspace', workspaceRoutes);
 
 // ============================================================================
 // 404 HANDLER
@@ -94,12 +96,13 @@ app.use((error, req, res, next) => {
 // ============================================================================
 
 app.listen(PORT, () => {
-  console.log(`✅ Learnova Backend running on port ${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔐 API: http://localhost:${PORT}/api`);
+  console.log(`âœ… Learnova Backend running on port ${PORT}`);
+  console.log(`ðŸ“¡ Health check: http://localhost:${PORT}/health`);
+  console.log(`ðŸ” API: http://localhost:${PORT}/api`);
 });
 
 export default app;
+
 
 
 

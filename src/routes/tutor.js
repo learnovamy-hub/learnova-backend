@@ -137,13 +137,14 @@ Previous conversation history is provided below.`;
       hasPracticeQuestion,
       topic,
       subject,
-      suggestedResponses: isCheckIn ? ['Yes, I understand! Continue please.', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!'] : ['Continue please!', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!']);
+      suggestedResponses: isCheckIn ? ['Yes, I understand! Continue please.', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!'] : ['Continue please!', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!']
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 export default router;
+
 
 
 

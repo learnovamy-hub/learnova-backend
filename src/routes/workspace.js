@@ -1,11 +1,12 @@
 ﻿// src/routes/workspace.js
 // Learnova Workspace â€” assess typed or handwritten student answers
-// Add to server.js: app.use('/api/workspace', require('./routes/workspace'));
 
 import express from 'express';
-const router = express.Router();
 import Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../config/database.js';
+import { processMistake, getMistakeSummary } from '../lib/mistake_intelligence.js';
+const router = express.Router();
+const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
@@ -259,5 +260,7 @@ router.get('/history/:studentId', async (req, res) => {
 });
 
 export default router;
+
+
 
 

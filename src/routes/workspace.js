@@ -1,5 +1,5 @@
-// src/routes/workspace.js
-// Learnova Workspace — assess typed or handwritten student answers
+﻿// src/routes/workspace.js
+// Learnova Workspace â€” assess typed or handwritten student answers
 // Add to server.js: app.use('/api/workspace', require('./routes/workspace'));
 
 const express = require('express');
@@ -10,66 +10,66 @@ const { createClient } = require('@supabase/supabase-js');
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// ─── Scoring rubric by subject ────────────────────────────────────────────────
+// â”€â”€â”€ Scoring rubric by subject â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const RUBRICS = {
   Mathematics: {
     marks: 4,
     criteria: [
-      'M1 — Correct method / approach shown',
-      'A1 — Correct intermediate working steps',
-      'A1 — Correct final answer',
-      'P1 — Working clearly presented and logical',
+      'M1 â€” Correct method / approach shown',
+      'A1 â€” Correct intermediate working steps',
+      'A1 â€” Correct final answer',
+      'P1 â€” Working clearly presented and logical',
     ],
     instruction: 'Mark strictly as an SPM Mathematics examiner. Award partial marks where working is shown but final answer is wrong.',
   },
   'Add Maths': {
     marks: 5,
     criteria: [
-      'M1 — Correct method selected',
-      'M1 — Correct application of method',
-      'A1 — Correct intermediate values',
-      'A1 — Correct final answer with units if applicable',
-      'P1 — Workings clearly laid out',
+      'M1 â€” Correct method selected',
+      'M1 â€” Correct application of method',
+      'A1 â€” Correct intermediate values',
+      'A1 â€” Correct final answer with units if applicable',
+      'P1 â€” Workings clearly laid out',
     ],
     instruction: 'Mark as SPM Additional Mathematics examiner.',
   },
   Physics: {
     marks: 4,
     criteria: [
-      'K1 — Correct formula or principle stated',
-      'S1 — Correct substitution',
-      'A1 — Correct calculation',
-      'A1 — Correct answer with units',
+      'K1 â€” Correct formula or principle stated',
+      'S1 â€” Correct substitution',
+      'A1 â€” Correct calculation',
+      'A1 â€” Correct answer with units',
     ],
     instruction: 'Mark as SPM Physics examiner. Units are compulsory for full marks.',
   },
   Chemistry: {
     marks: 4,
     criteria: [
-      'K1 — Correct concept or formula',
-      'S1 — Correct method applied',
-      'A1 — Correct answer',
-      'P1 — Correct chemical notation used',
+      'K1 â€” Correct concept or formula',
+      'S1 â€” Correct method applied',
+      'A1 â€” Correct answer',
+      'P1 â€” Correct chemical notation used',
     ],
     instruction: 'Mark as SPM Chemistry examiner.',
   },
   Biology: {
     marks: 3,
     criteria: [
-      'K1 — Correct biological concept',
-      'K1 — Correct explanation of process',
-      'A1 — Accurate conclusion or answer',
+      'K1 â€” Correct biological concept',
+      'K1 â€” Correct explanation of process',
+      'A1 â€” Accurate conclusion or answer',
     ],
     instruction: 'Mark as SPM Biology examiner.',
   },
   default: {
     marks: 4,
     criteria: [
-      'K1 — Demonstrates understanding of concept',
-      'K1 — Correct approach / reasoning shown',
-      'A1 — Accurate answer',
-      'P1 — Clear and organised presentation',
+      'K1 â€” Demonstrates understanding of concept',
+      'K1 â€” Correct approach / reasoning shown',
+      'A1 â€” Accurate answer',
+      'P1 â€” Clear and organised presentation',
     ],
     instruction: 'Mark as an SPM examiner.',
   },
@@ -82,7 +82,7 @@ function getRubric(subject) {
   return RUBRICS.default;
 }
 
-// ─── Build assessment prompt ───────────────────────────────────────────────────
+// â”€â”€â”€ Build assessment prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function buildPrompt(subject, topic, question, correctAnswer, rubric) {
   return `You are an experienced SPM examiner for ${subject}.
@@ -108,7 +108,7 @@ Assess the student's answer/working below and return ONLY this JSON:
 }`;
 }
 
-// ─── POST /api/workspace/assess ───────────────────────────────────────────────
+// â”€â”€â”€ POST /api/workspace/assess â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 router.post('/assess', async (req, res) => {
   try {
@@ -118,7 +118,7 @@ router.post('/assess', async (req, res) => {
       subject,
       topic,
       question,
-      correct_answer,   // optional — from quiz bank
+      correct_answer,   // optional â€” from quiz bank
       input_mode,       // 'typed' | 'drawn'
       student_answer,   // text (typed mode)
       image_base64,     // PNG base64 (drawn mode)
@@ -137,7 +137,7 @@ router.post('/assess', async (req, res) => {
     let messages;
 
     if (input_mode === 'drawn' && image_base64) {
-      // Vision assessment — handwritten workings
+      // Vision assessment â€” handwritten workings
       messages = [{
         role: 'user',
         content: [
@@ -156,7 +156,7 @@ router.post('/assess', async (req, res) => {
         ],
       }];
     } else {
-      // Text assessment — typed answer
+      // Text assessment â€” typed answer
       messages = [{
         role: 'user',
         content: `Student's answer:\n${student_answer}`,
@@ -215,7 +215,7 @@ router.post('/assess', async (req, res) => {
   }
 });
 
-// ─── GET /api/workspace/history/:studentId ────────────────────────────────────
+// â”€â”€â”€ GET /api/workspace/history/:studentId â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 router.get('/history/:studentId', async (req, res) => {
   try {
@@ -258,4 +258,5 @@ router.get('/history/:studentId', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
+

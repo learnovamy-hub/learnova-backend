@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../config/database.js';
 
@@ -61,7 +61,7 @@ SUMMARY: ${lesson.summary}
     const questionsContext = practiceQuestions.length > 0 ? 
       practiceQuestions.map((q, i) => `Q${i+1}: ${q.question}\nOptions: ${JSON.stringify(q.options)}\nAnswer: ${q.correct_answer}`).join('\n\n') : '';
 
-    const systemPrompt = `You are Learnova AI Tutor — a warm, encouraging Malaysian SPM ${subject} tutor teaching the topic: "${topic}".
+    const systemPrompt = `You are Learnova AI Tutor â€” a warm, encouraging Malaysian SPM ${subject} tutor teaching the topic: "${topic}".
 
 Your teaching style:
 - Teach like a real tuition teacher, NOT like a textbook
@@ -72,9 +72,9 @@ Your teaching style:
 - If student says they understand, praise briefly and move to next concept
 - If student has questions, answer clearly using textbook content
 - At the end of a topic, offer practice questions from the question bank
-- Never dump all content at once — teach in segments
+- Never dump all content at once â€” teach in segments
 - Keep each response focused and under 300 words
-- Use emojis sparingly to keep it friendly 😊
+- Use emojis sparingly to keep it friendly ðŸ˜Š
 
 LESSON CONTENT TO TEACH FROM:
 ${lessonContext}
@@ -87,7 +87,7 @@ TEACHING PHASES:
 - concept: Teach one concept at a time, then check understanding
 - example: Walk through a worked example step by step
 - practice: Give student a practice question and guide them
-- question: Student asked something — answer it using lesson content
+- question: Student asked something â€” answer it using lesson content
 
 Current phase: ${phase}
 Previous conversation history is provided below.`;
@@ -137,39 +137,14 @@ Previous conversation history is provided below.`;
       hasPracticeQuestion,
       topic,
       subject,
-      suggestedResponses: isCheckIn ? [
-        'Yes, I understand! Continue please.',
-        'I have a question...',
-        'Can you explain that again?',
-        'Give me a practice question!'
-      ] : []
-    });
-
-  } catch (err) {
-    console.error('Tutor session error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * GET /api/tutor/topics?subject=Mathematics
- * Returns available topics with lessons
- */
-router.get('/topics', async (req, res) => {
-  try {
-    const { subject = 'Mathematics' } = req.query;
-    const { data, error } = await supabase
-      .from('lessons')
-      .select('id, title, topic, form_level, learning_objectives')
-      .eq('subject', subject)
-      .eq('status', 'published')
-      .order('chapter_number', { ascending: true });
-
-    if (error) throw error;
-    res.json(data || []);
+      suggestedResponses: isCheckIn ? ['Yes, I understand! Continue please.', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!'] : ['Continue please!', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!']);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 export default router;
+
+
+
+

@@ -1,153 +1,199 @@
-﻿import express from 'express';
+import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../config/database.js';
 
 const router = express.Router();
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
-// Fetch lesson content from DB
 async function getLesson(subject, topic) {
   const { data } = await supabase
-    .from('lessons')
-    .select('*')
+    .from('lessons').select('*')
     .eq('subject', subject)
-    .ilike('topic', `%${topic}%`)
+    .ilike('topic', '%' + topic + '%')
     .eq('status', 'published')
     .maybeSingle();
   return data;
 }
 
-// Fetch past year or seeded questions for practice
-async function getPracticeQuestions(subject, topic, limit = 3) {
+async function getPracticeQuestions(subject, topic, limit) {
+  if (!limit) limit = 3;
   const { data } = await supabase
     .from('quiz_questions')
     .select('id, question, options, correct_answer, explanation, quizzes!inner(subject, topic)')
     .eq('quizzes.subject', subject)
-    .ilike('quizzes.topic', `%${topic}%`)
+    .ilike('quizzes.topic', '%' + topic + '%')
     .not('correct_answer', 'is', null)
     .limit(limit);
   return data || [];
 }
 
-/**
- * POST /api/tutor/session
- * 
- * Body: {
- *   subject: "Mathematics",
- *   topic: "Quadratic Functions",
- *   message: "student message or 'start'",
- *   history: [{role, content}],
- *   phase: "intro|concept|example|practice|question"
- * }
- */
 router.post('/session', async (req, res) => {
   try {
-    const { subject = 'Mathematics', topic, message = 'start', history = [], phase = 'intro' } = req.body;
+    const {
+      subject = 'Mathematics',
+      topic,
+      message = 'start',
+      history = [],
+      phase = 'intro',
+      segment = 0,
+      activeQuestion = null
+    } = req.body;
+
     if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
-    // Get lesson content
     const lesson = await getLesson(subject, topic);
-    const lessonContext = lesson ? `
-LESSON TITLE: ${lesson.title}
-INTRODUCTION: ${lesson.introduction}
-CONTENT: ${lesson.content}
-WORKED EXAMPLES: ${lesson.worked_examples}
-COMMON MISTAKES: ${lesson.common_mistakes}
-SUMMARY: ${lesson.summary}
-` : `You are teaching SPM Form 4/5 ${subject} topic: ${topic}. Use your knowledge of the Malaysian SPM curriculum.`;
-
-    // Get practice questions for later use
     const practiceQuestions = await getPracticeQuestions(subject, topic);
-    const questionsContext = practiceQuestions.length > 0 ? 
-      practiceQuestions.map((q, i) => `Q${i+1}: ${q.question}\nOptions: ${JSON.stringify(q.options)}\nAnswer: ${q.correct_answer}`).join('\n\n') : '';
 
-    const systemPrompt = `You are Learnova AI Tutor â€” a warm, encouraging Malaysian SPM ${subject} tutor teaching the topic: "${topic}".
+    // ── INTRO ─────────────────────────────────────────────────────────────────
+    if (message === 'start' || phase === 'intro') {
+      const intro = lesson
+        ? (lesson.introduction || (lesson.content || '').substring(0, 600))
+        : null;
+      const prompt = intro
+        ? 'Deliver this introduction warmly in 2-3 short paragraphs. End by asking if they are ready for the first concept. Do NOT teach concepts yet.\n\n' + intro
+        : 'Give a brief 2-paragraph introduction to ' + topic + ' in SPM ' + subject + '. End by asking if the student is ready to begin.';
 
-Your teaching style:
-- Teach like a real tuition teacher, NOT like a textbook
-- Break content into small digestible steps
-- Use simple, conversational language (mix of English and occasional Malay terms like "faham?", "okay?")
-- After every 2-3 concepts, pause and check understanding
-- When checking understanding, ask ONE specific question like "Can you tell me what [concept] means?" or "Do you understand how we got [answer]? Any questions?"
-- If student says they understand, praise briefly and move to next concept
-- If student has questions, answer clearly using textbook content
-- At the end of a topic, offer practice questions from the question bank
-- Never dump all content at once â€” teach in segments
-- Keep each response focused and under 300 words
-- Use emojis sparingly to keep it friendly ðŸ˜Š
+      const r = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 400,
+        system: 'You are a warm encouraging SPM ' + subject + ' tutor. Be friendly and conversational.',
+        messages: [{ role: 'user', content: prompt }]
+      });
 
-LESSON CONTENT TO TEACH FROM:
-${lessonContext}
-
-PRACTICE QUESTIONS AVAILABLE (use at end of session or when student asks for examples):
-${questionsContext}
-
-TEACHING PHASES:
-- intro: Introduce the topic, explain what it is and why it matters (1-2 paragraphs)
-- concept: Teach one concept at a time, then check understanding
-- example: Walk through a worked example step by step
-- practice: Give student a practice question and guide them
-- question: Student asked something â€” answer it using lesson content
-
-Current phase: ${phase}
-Previous conversation history is provided below.`;
-
-    // Build messages array
-    const messages = [
-      ...history,
-      { role: 'user', content: message === 'start' ? `Please start teaching me about ${topic}` : message }
-    ];
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 600,
-      system: systemPrompt,
-      messages
-    });
-
-    const reply = response.content[0].text.trim();
-
-    // Detect next phase based on reply content
-    let nextPhase = phase;
-    const replyLower = reply.toLowerCase();
-    if (replyLower.includes('let\'s practice') || replyLower.includes('try a question') || replyLower.includes('practice question')) {
-      nextPhase = 'practice';
-    } else if (replyLower.includes('let\'s look at an example') || replyLower.includes('worked example') || replyLower.includes('let me show you')) {
-      nextPhase = 'example';
-    } else if (replyLower.includes('do you understand') || replyLower.includes('any questions') || replyLower.includes('faham') || replyLower.includes('make sense')) {
-      nextPhase = 'concept';
+      return res.json({
+        reply: r.content[0].text.trim(),
+        phase: 'concept',
+        segment: 0,
+        isCheckIn: false,
+        activeQuestion: null,
+        suggestedResponses: ["Yes, I'm ready! Let's start 🚀", 'Tell me more about this topic first', 'I have a question...']
+      });
     }
 
-    // Detect if tutor is asking a check-in question
-    const isCheckIn = replyLower.includes('do you understand') || 
-                      replyLower.includes('any questions') || 
-                      replyLower.includes('shall we') ||
-                      replyLower.includes('ready to') ||
-                      replyLower.includes('faham') ||
-                      replyLower.includes('make sense');
+    // ── QUIZ ANSWER — student answering an active MCQ ─────────────────────────
+    if (phase === 'quiz_answer' && activeQuestion) {
+      const q = activeQuestion;
+      const studentAns = message.trim().toUpperCase().charAt(0);
+      const correct = studentAns === (q.correct_answer || '').toUpperCase();
 
-    // Detect if practice question is included
-    const hasPracticeQuestion = practiceQuestions.length > 0 && 
-                                (replyLower.includes('question') && replyLower.includes('answer'));
+      if (correct) {
+        return res.json({
+          reply: '✅ Correct! Well done!\n\n' + (q.explanation || 'Great work — you understood that concept well.') + '\n\nReady to continue?',
+          phase: 'concept',
+          segment: segment + 1,
+          isCheckIn: false,
+          activeQuestion: null,
+          suggestedResponses: ['Continue to next concept! 👍', 'I have a question...', 'Give me another question!']
+        });
+      }
 
-    res.json({
-      reply,
-      phase: nextPhase,
-      isCheckIn,
-      hasPracticeQuestion,
-      topic,
-      subject,
-      suggestedResponses: isCheckIn ? ['Yes, I understand! Continue please.', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!'] : ['Continue please!', 'I have a question...', 'Can you explain that again?', 'Give me a practice question!']
+      return res.json({
+        reply: 'Not quite — the correct answer is **' + q.correct_answer + '**\n\n' + (q.explanation || 'Review the concept and try to understand why ' + q.correct_answer + ' is correct.') + '\n\nShall we continue with the lesson?',
+        phase: 'concept',
+        segment: segment + 1,
+        isCheckIn: false,
+        activeQuestion: null,
+        suggestedResponses: ['I understand now, continue', 'Can you explain why?', 'Give me another question']
+      });
+    }
+
+    // ── PRACTICE REQUEST — student wants a question ───────────────────────────
+    const msgLower = message.toLowerCase();
+    const wantsQuestion = msgLower.includes('practice') || msgLower.includes('question') ||
+      msgLower.includes('quiz') || msgLower.includes('soalan') || msgLower.includes('test me');
+
+    if (wantsQuestion) {
+      if (practiceQuestions.length > 0) {
+        const idx = Math.min(segment, practiceQuestions.length - 1);
+        const q = practiceQuestions[idx];
+        let opts = '';
+        if (q.options && typeof q.options === 'object') {
+          opts = Object.entries(q.options).map(function(entry) { return entry[0] + '. ' + entry[1]; }).join('\n');
+        }
+        return res.json({
+          reply: '📝 **Practice Question:**\n\n' + q.question + '\n\n' + opts + '\n\nType A, B, C or D — or use the workspace to show your working!',
+          phase: 'quiz_answer',
+          segment: segment,
+          isCheckIn: false,
+          activeQuestion: q,
+          suggestedResponses: ['A', 'B', 'C', 'D'],
+          openWorkspace: true
+        });
+      }
+      return res.json({
+        reply: "No practice questions available for this topic yet — let's continue the lesson!",
+        phase: 'concept',
+        segment: segment,
+        isCheckIn: false,
+        activeQuestion: null,
+        suggestedResponses: ['Continue the lesson', 'I have a question...']
+      });
+    }
+
+    // ── CONCEPT — teach one concept at a time then check-in ──────────────────
+    const lessonContent = lesson ? (lesson.content || lesson.worked_examples || '') : '';
+    const chunks = lessonContent.split('\n\n').filter(function(c) { return c.trim().length > 50; });
+    const currentChunk = chunks[segment] || null;
+
+    const system = 'You are a warm SPM ' + subject + ' tutor teaching "' + topic + '".\n'
+      + 'STRICT RULES:\n'
+      + '- Teach ONLY ONE concept or step in this response\n'
+      + '- Maximum 200 words\n'
+      + '- End with exactly ONE check-in question e.g. "Does that make sense?" or "Faham?" or "Any questions before we move on?"\n'
+      + '- Do NOT give practice questions\n'
+      + '- Do NOT list multiple concepts at once\n'
+      + '- Be conversational and encouraging';
+
+    const userMsg = currentChunk
+      ? 'Teach this concept to the student in your own words:\n' + currentChunk + '\n\nStudent said: ' + message
+      : 'Student said: ' + message + '\n\nContinue teaching ' + topic + ' in ' + subject + '. We are on segment ' + segment + '.';
+
+    const msgs = history.slice(-4).concat([{ role: 'user', content: userMsg }]);
+
+    const r = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 400,
+      system: system,
+      messages: msgs
     });
+
+    const reply = r.content[0].text.trim();
+    const rl = reply.toLowerCase();
+    const isCheckIn = rl.includes('faham') || rl.includes('make sense') ||
+      rl.includes('any questions') || rl.includes('understand') ||
+      rl.includes('okay?') || rl.includes('ready') || rl.includes('shall we');
+
+    return res.json({
+      reply: reply,
+      phase: 'concept',
+      segment: isCheckIn ? segment : segment + 1,
+      isCheckIn: isCheckIn,
+      activeQuestion: null,
+      suggestedResponses: isCheckIn
+        ? ['Yes, I understand! Continue 👍', 'I have a question...', 'Explain again please', 'Give me a practice question! 📝']
+        : ['Continue please!', 'I have a question...', 'Give me a practice question! 📝']
+    });
+
+  } catch (err) {
+    console.error('Tutor error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/topics', async (req, res) => {
+  try {
+    const { subject = 'Mathematics' } = req.query;
+    const { data, error } = await supabase
+      .from('lessons')
+      .select('id, title, topic, form_level, learning_objectives')
+      .eq('subject', subject)
+      .eq('status', 'published')
+      .order('chapter_number', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 export default router;
-
-
-
-
-
-

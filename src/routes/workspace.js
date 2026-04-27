@@ -2,13 +2,13 @@
 // Learnova Workspace â€” assess typed or handwritten student answers
 // Add to server.js: app.use('/api/workspace', require('./routes/workspace'));
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const Anthropic = require('@anthropic-ai/sdk');
-const { createClient } = require('@supabase/supabase-js');
+import Anthropic from '@anthropic-ai/sdk';
+import { supabase } from '../config/database.js';
 
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
 
 // â”€â”€â”€ Scoring rubric by subject â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -259,4 +259,5 @@ router.get('/history/:studentId', async (req, res) => {
 });
 
 export default router;
+
 

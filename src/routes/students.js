@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { authMiddleware } from '../config/auth.js';
 import { supabase } from '../config/database.js';
 
@@ -61,7 +61,7 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
       .limit(20);
 
     if (error) {
-      // quiz_results table may not exist yet — return empty
+      // quiz_results table may not exist yet â€” return empty
       return res.json([]);
     }
 
@@ -71,4 +71,37 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
   }
 });
 
+
+// PATCH /api/student/profile - save onboarding data
+router.patch('/profile', async (req, res) => {
+  try {
+    const { student_id, form_level, subjects, onboarding_complete } = req.body;
+    if (!student_id) return res.status(400).json({ error: 'student_id required' });
+    const { error } = await supabase
+      .from('students')
+      .update({ form_level, subjects, onboarding_complete })
+      .eq('id', student_id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/student/profile/:studentId - check onboarding status
+router.get('/profile/:studentId', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('id, form_level, subjects, onboarding_complete')
+      .eq('id', req.params.studentId)
+      .maybeSingle();
+    if (error) throw error;
+    res.json(data || {});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
+

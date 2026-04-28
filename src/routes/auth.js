@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { body, validationResult } from 'express-validator';
 import {
   hashPassword,
@@ -55,14 +55,20 @@ router.post(
       const user = await createUser(email, passwordHash, full_name, role);
 
       // If student, create student profile
-      // Auto-link to parent if parent_email provided
-      if (role === 'student' && parent_email) {
-        const { data: parentUser } = await supabase.from('users').select('id').eq('email', parent_email.toLowerCase()).eq('role', 'parent').maybeSingle();
-        if (parentUser) {
-          await supabase.from('parent_student_links').upsert([{ parent_id: parentUser.id, student_id: user.id, status: 'pending' }], { onConflict: 'parent_id,student_id', ignoreDuplicates: true });
+      if (role === 'student') {
+        const { supabase } = await import('../config/database.js');
+        await supabase.from('students').insert({ id: user.id, full_name, email });
+        const parentEmail = req.body.parent_email;
+        if (parentEmail) {
+          const parentUser = await getUserByEmail(parentEmail);
+          if (parentUser) {
+            await supabase.from('parent_student_links').upsert(
+              [{ parent_id: parentUser.id, student_id: user.id, status: 'pending' }],
+              { onConflict: 'parent_id,student_id', ignoreDuplicates: true }
+            );
+          }
         }
       }
-      // Student profile created on first login
 
       // If teacher, create teacher profile
       if (role === 'teacher') {
@@ -237,6 +243,7 @@ router.get('/teacher-profile', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
 
 
 

@@ -75,7 +75,17 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
 // PATCH /api/student/profile - save onboarding data
 router.patch('/profile', async (req, res) => {
   try {
-    const { student_id, form_level, subjects, onboarding_complete, preferred_language } = req.body;
+    let { student_id, form_level, subjects, onboarding_complete, preferred_language } = req.body;
+    if (!student_id) {
+      const auth = req.headers['authorization'];
+      if (auth) {
+        try {
+          const { generateToken, verifyToken } = await import('../config/auth.js');
+          const decoded = verifyToken(auth.replace('Bearer ', ''));
+          student_id = decoded?.userId;
+        } catch(e) {}
+      }
+    }
     if (!student_id) return res.status(400).json({ error: 'student_id required' });
     const { error } = await supabase
       .from('students')
@@ -104,6 +114,7 @@ router.get('/profile/:studentId', async (req, res) => {
 });
 
 export default router;
+
 
 
 

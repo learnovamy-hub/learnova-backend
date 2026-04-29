@@ -76,6 +76,18 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
 router.patch('/profile', async (req, res) => {
   try {
     let { student_id, form_level, subjects, onboarding_complete, preferred_language } = req.body;
+    // Also check header
+    if (!student_id) student_id = req.headers['x-student-id'];
+    // Also check JWT
+    if (!student_id) {
+      try {
+        const auth = req.headers['authorization'] || '';
+        if (auth.startsWith('Bearer ')) {
+          const jwt = JSON.parse(Buffer.from(auth.split('.')[1], 'base64').toString());
+          student_id = jwt.userId;
+        }
+      } catch(_) {}
+    }
     if (!student_id) {
       const auth = req.headers['authorization'];
       if (auth) {
@@ -114,6 +126,7 @@ router.get('/profile/:studentId', async (req, res) => {
 });
 
 export default router;
+
 
 
 

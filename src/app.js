@@ -28,9 +28,12 @@ const PORT = process.env.PORT || 3000;
 
 // CORS
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
 }));
+app.options('*', cors());
 
 // Body parser
 app.use(express.json());
@@ -102,6 +105,7 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
 
 
 

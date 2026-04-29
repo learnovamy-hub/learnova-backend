@@ -1,11 +1,19 @@
-import express from 'express';
+﻿import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../config/database.js';
 
 const router = express.Router();
+const LANGUAGE_CONFIG = {
+  en: { tts_lang: 'en-US', suffix: 'Always respond in English.' },
+  ms: { tts_lang: 'ms-MY', suffix: 'Sentiasa balas dalam Bahasa Malaysia yang mudah dan jelas.' },
+  zh: { tts_lang: 'zh-CN', suffix: '始终用简体中文回答。使用清晰、简单的语言。' },
+  ta: { tts_lang: 'ta-IN', suffix: 'எப்போதும் தமிழில் பதில் சொல்லுங்கள்.' },
+};
+function getLangConfig(lang) { return LANGUAGE_CONFIG[lang] || LANGUAGE_CONFIG.en; }
+
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
-// ─── DB helpers ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ DB helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function getLesson(subject, topic) {
   const { data } = await supabase
@@ -84,7 +92,7 @@ async function detectTopicSwitch(message, currentTopic, subject) {
   return null;
 }
 
-// ─── Main session handler ─────────────────────────────────────────────────────
+// â”€â”€â”€ Main session handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 router.post('/session', async (req, res) => {
   try {
@@ -100,12 +108,12 @@ router.post('/session', async (req, res) => {
 
     if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
-    // ── Topic switch detection ────────────────────────────────────────────────
+    // â”€â”€ Topic switch detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (message !== 'start' && phase !== 'quiz_answer') {
       const switchTarget = await detectTopicSwitch(message, topic, subject);
       if (switchTarget) {
         return res.json({
-          reply: 'I see you want to study **' + switchTarget.topic + '** — great initiative! Your teacher taught this today? 👍\n\nShall we switch to that topic now?',
+          reply: 'I see you want to study **' + switchTarget.topic + '** â€” great initiative! Your teacher taught this today? ðŸ‘\n\nShall we switch to that topic now?',
           phase: phase, segment: segment, isCheckIn: false, activeQuestion: null,
           topicSwitchSuggested: true, suggestedTopic: switchTarget.topic, suggestedTopicId: switchTarget.id,
           suggestedResponses: ['Yes, switch to ' + switchTarget.topic + '!', 'No, continue current topic'],
@@ -125,7 +133,7 @@ router.post('/session', async (req, res) => {
       ? 'Standard ' + currentStandard.code + ' (' + (segment + 1) + ' of ' + totalStandards + ')'
       : null;
 
-    // ── INTRO ─────────────────────────────────────────────────────────────────
+    // â”€â”€ INTRO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (message === 'start' || phase === 'intro') {
       const intro = lesson
         ? (lesson.introduction || (lesson.content || '').substring(0, 600))
@@ -133,7 +141,7 @@ router.post('/session', async (req, res) => {
 
       const standardsList = standards.length > 0
         ? '\n\nIn this topic you will master ' + totalStandards + ' learning standards:\n' +
-          standards.slice(0, 5).map(function(s) { return '• ' + s.code + ': ' + s.description.substring(0, 60) + '...'; }).join('\n') +
+          standards.slice(0, 5).map(function(s) { return 'â€¢ ' + s.code + ': ' + s.description.substring(0, 60) + '...'; }).join('\n') +
           (standards.length > 5 ? '\n...and ' + (standards.length - 5) + ' more.' : '')
         : '';
 
@@ -143,7 +151,7 @@ router.post('/session', async (req, res) => {
 
       const r = await anthropic.messages.create({
         model: 'claude-sonnet-4-5', max_tokens: 400,
-        system: 'You are a warm encouraging SPM ' + subject + ' tutor. Be friendly and conversational.',
+        system: 'You are a warm encouraging SPM ' + subject + ' tutor. Be friendly and conversational. ' + getLangConfig(language).suffix,
         messages: [{ role: 'user', content: prompt }]
       });
 
@@ -155,11 +163,11 @@ router.post('/session', async (req, res) => {
         standardDesc: standards.length > 0 ? standards[0].description : null,
         standardsProgress: standards.length > 0 ? 'Standard ' + standards[0].code + ' (1 of ' + totalStandards + ')' : null,
         totalStandards: totalStandards,
-        suggestedResponses: ["Yes, I'm ready! Let's start 🚀", 'Tell me more first', 'I have a question...']
+        suggestedResponses: ["Yes, I'm ready! Let's start ðŸš€", 'Tell me more first', 'I have a question...']
       });
     }
 
-    // ── QUIZ ANSWER ───────────────────────────────────────────────────────────
+    // â”€â”€ QUIZ ANSWER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (phase === 'quiz_answer' && activeQuestion) {
       const q = activeQuestion;
       const studentAns = message.trim().toUpperCase().charAt(0);
@@ -168,21 +176,21 @@ router.post('/session', async (req, res) => {
 
       if (correct) {
         const nextMsg = nextStandard
-          ? '\n\nNext up: **Standard ' + nextStandard.code + '** — ' + nextStandard.description.substring(0, 60) + '...'
-          : '\n\nYou\'ve covered all the standards for this topic! 🎉';
+          ? '\n\nNext up: **Standard ' + nextStandard.code + '** â€” ' + nextStandard.description.substring(0, 60) + '...'
+          : '\n\nYou\'ve covered all the standards for this topic! ðŸŽ‰';
         return res.json({
-          reply: '✅ Correct! Well done!\n\n' + (q.explanation || 'Great work!') + nextMsg,
+          reply: 'âœ… Correct! Well done!\n\n' + (q.explanation || 'Great work!') + nextMsg,
           phase: 'concept', segment: segment + 1, isCheckIn: false, activeQuestion: null,
           topicSwitchSuggested: false,
           standardCode: nextStandard ? nextStandard.code : null,
           standardDesc: nextStandard ? nextStandard.description : null,
           standardsProgress: nextStandard ? 'Standard ' + nextStandard.code + ' (' + (segment + 2) + ' of ' + totalStandards + ')' : 'Topic Complete!',
-          suggestedResponses: ['Continue! 👍', 'I have a question...', 'Give me another question!']
+          suggestedResponses: ['Continue! ðŸ‘', 'I have a question...', 'Give me another question!']
         });
       }
 
       return res.json({
-        reply: 'Not quite — the correct answer is **' + q.correct_answer + '**\n\n' + (q.explanation || 'Review this concept.') + '\n\nShall we continue?',
+        reply: 'Not quite â€” the correct answer is **' + q.correct_answer + '**\n\n' + (q.explanation || 'Review this concept.') + '\n\nShall we continue?',
         phase: 'concept', segment: segment + 1, isCheckIn: false, activeQuestion: null,
         topicSwitchSuggested: false,
         standardCode: currentStandard ? currentStandard.code : null,
@@ -192,7 +200,7 @@ router.post('/session', async (req, res) => {
       });
     }
 
-    // ── PRACTICE REQUEST ──────────────────────────────────────────────────────
+    // â”€â”€ PRACTICE REQUEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const msgLower = message.toLowerCase();
     const wantsQuestion = msgLower.includes('practice') || msgLower.includes('give me a question') ||
       msgLower.includes('quiz') || msgLower.includes('soalan') || msgLower.includes('test me') ||
@@ -208,7 +216,7 @@ router.post('/session', async (req, res) => {
         }
         const standardTag = currentStandard ? '\n\n_Testing: Standard ' + currentStandard.code + '_' : '';
         return res.json({
-          reply: '📝 **Practice Question:**\n\n' + q.question + '\n\n' + opts + '\n\nType A, B, C or D — or use the workspace!' + standardTag,
+          reply: 'ðŸ“ **Practice Question:**\n\n' + q.question + '\n\n' + opts + '\n\nType A, B, C or D â€” or use the workspace!' + standardTag,
           phase: 'quiz_answer', segment: segment, isCheckIn: false, activeQuestion: q,
           topicSwitchSuggested: false,
           standardCode: currentStandard ? currentStandard.code : null,
@@ -218,14 +226,14 @@ router.post('/session', async (req, res) => {
         });
       }
       return res.json({
-        reply: "No practice questions yet for this topic — let's continue the lesson!",
+        reply: "No practice questions yet for this topic â€” let's continue the lesson!",
         phase: 'concept', segment: segment, isCheckIn: false, activeQuestion: null,
-        topicSwitchSuggested: false, standardCode: null, standardDesc: null, standardsProgress: standardsProgress,
+        tts_lang: getLangConfig(language).tts_lang, topicSwitchSuggested: false, standardCode: null, standardDesc: null, standardsProgress: standardsProgress,
         suggestedResponses: ['Continue the lesson', 'I have a question...']
       });
     }
 
-    // ── CONCEPT ───────────────────────────────────────────────────────────────
+    // â”€â”€ CONCEPT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const lessonContent = lesson ? (lesson.content || lesson.worked_examples || '') : '';
     const chunks = lessonContent.split('\n\n').filter(function(c) { return c.trim().length > 50; });
     const currentChunk = chunks[segment] || null;
@@ -243,7 +251,7 @@ router.post('/session', async (req, res) => {
       + '- Do NOT give practice questions\n'
       + '- Do NOT list multiple concepts\n'
       + '- Be conversational and encouraging\n'
-      + '- If teaching a standard, start with: "📌 Standard ' + (currentStandard ? currentStandard.code : '') + '"';
+      + '- If teaching a standard, start with: "ðŸ“Œ Standard ' + (currentStandard ? currentStandard.code : '') + '"';
 
     const userMsg = currentChunk
       ? 'Teach this concept to the student:\n' + currentChunk + '\n\nStudent said: ' + message
@@ -272,8 +280,8 @@ router.post('/session', async (req, res) => {
       standardsProgress: standardsProgress,
       totalStandards: totalStandards,
       suggestedResponses: isCheckIn
-        ? ['Yes, I understand! Continue 👍', 'I have a question...', 'Explain again please', 'Give me a practice question! 📝']
-        : ['Continue please!', 'I have a question...', 'Give me a practice question! 📝']
+        ? ['Yes, I understand! Continue ðŸ‘', 'I have a question...', 'Explain again please', 'Give me a practice question! ðŸ“']
+        : ['Continue please!', 'I have a question...', 'Give me a practice question! ðŸ“']
     });
 
   } catch (err) {
@@ -282,7 +290,7 @@ router.post('/session', async (req, res) => {
   }
 });
 
-// ─── GET /api/tutor/topics ────────────────────────────────────────────────────
+// â”€â”€â”€ GET /api/tutor/topics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 router.get('/topics', async (req, res) => {
   try {
@@ -298,7 +306,7 @@ router.get('/topics', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ─── GET /api/tutor/standards ─────────────────────────────────────────────────
+// â”€â”€â”€ GET /api/tutor/standards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 router.get('/standards', async (req, res) => {
   try {
@@ -330,3 +338,4 @@ router.get('/standards', async (req, res) => {
 });
 
 export default router;
+

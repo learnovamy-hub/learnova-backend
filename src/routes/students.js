@@ -75,7 +75,7 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
 // PATCH /api/student/profile - save onboarding data
 router.patch('/profile', async (req, res) => {
   try {
-    const { student_id, form_level, subjects, onboarding_complete } = req.body;
+    const { student_id, form_level, subjects, onboarding_complete, preferred_language } = req.body;
     if (!student_id) return res.status(400).json({ error: 'student_id required' });
     const { error } = await supabase
       .from('students')
@@ -104,5 +104,6 @@ router.get('/profile/:studentId', async (req, res) => {
 });
 
 export default router;
+
 
 

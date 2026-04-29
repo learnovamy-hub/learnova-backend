@@ -18,6 +18,7 @@ import sessionRoutes from './routes/sessions.js';
 import parentRoutes from './routes/parent.js';
 import adminRoutes from './routes/admin.js';
 import workspaceRoutes from './routes/workspace.js';
+import welcomeRoutes from './routes/welcome.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,6 +75,7 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/workspace', workspaceRoutes);
+app.use('/api/tutor/welcome', welcomeRoutes);
 
 // ============================================================================
 // 404 HANDLER
@@ -105,6 +107,7 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
 
 
 

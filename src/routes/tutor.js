@@ -294,7 +294,7 @@ router.post('/session', async (req, res) => {
 
 router.get('/topics', async (req, res) => {
   try {
-    const { subject = 'Mathematics' } = req.query;
+    const { language = 'en', subject = 'Mathematics' } = req.query;
     const { data, error } = await supabase
       .from('lessons')
       .select('id, title, topic, form_level, learning_objectives')
@@ -310,7 +310,7 @@ router.get('/topics', async (req, res) => {
 
 router.get('/standards', async (req, res) => {
   try {
-    const { subject, topic, student_id } = req.query;
+    const { language = 'en', subject, topic, student_id } = req.query;
     let query = supabase.from('learning_standards').select('*');
     if (subject) query = query.eq('subject', subject);
     if (topic)   query = query.ilike('topic', '%' + topic + '%');
@@ -338,4 +338,5 @@ router.get('/standards', async (req, res) => {
 });
 
 export default router;
+
 

@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { supabase } from '../config/database.js';
 import { authMiddleware, studentMiddleware } from '../config/auth.js';
 import {
@@ -125,7 +125,7 @@ router.get('/', async (req, res) => {
 
     let query = supabase
       .from('lessons')
-      .select('id, title, topic, subject, form_level, introduction, content, worked_examples, common_mistakes, summary, learning_objectives, status, created_at')
+      .select('id, title, topic, subject, form_level, introduction, content, worked_examples, common_mistakes, summary, learning_objectives, status, created_at, audio_url, audio_url_ms, audio_url_zh, audio_url_ta')
       .eq('status', 'published')
       .order('created_at', { ascending: true });
 
@@ -142,5 +142,6 @@ router.get('/', async (req, res) => {
 });
 
 export default router;
+
 
 

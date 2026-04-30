@@ -83,8 +83,10 @@ router.post('/profile/onboard', async (req, res) => {
       } catch(_) {}
     }
     if (!student_id) return res.status(400).json({ error: 'student_id required' });
+    // Get email from users table
+    const { data: userData } = await supabase.from('users').select('email, full_name').eq('id', student_id).single();
     const { error } = await supabase.from('students').upsert(
-      { id: student_id, form_level, subjects, preferred_language, onboarding_complete },
+      { id: student_id, email: userData?.email, full_name: userData?.full_name, form_level, subjects, preferred_language, onboarding_complete },
       { onConflict: 'id' }
     );
     if (error) throw error;
@@ -145,6 +147,7 @@ router.get('/profile/:studentId', async (req, res) => {
 });
 
 export default router;
+
 
 
 

@@ -151,7 +151,7 @@ router.post('/session', async (req, res) => {
 
       const r = await anthropic.messages.create({
         model: 'claude-sonnet-4-5', max_tokens: 400,
-        system: 'You are a warm encouraging SPM ' + subject + ' tutor. Be friendly and conversational. ' + getLangConfig(language).suffix,
+        system: 'You are a warm, encouraging SPM ' + subject + ' tutor. Be friendly, clear and conversational.',
         messages: [{ role: 'user', content: prompt }]
       });
 
@@ -228,7 +228,7 @@ router.post('/session', async (req, res) => {
       return res.json({
         reply: "No practice questions yet for this topic â€” let's continue the lesson!",
         phase: 'concept', segment: segment, isCheckIn: false, activeQuestion: null,
-        tts_lang: getLangConfig(language).tts_lang, topicSwitchSuggested: false, standardCode: null, standardDesc: null, standardsProgress: standardsProgress,
+        topicSwitchSuggested: false, standardCode: null, standardDesc: null, standardsProgress: standardsProgress,
         suggestedResponses: ['Continue the lesson', 'I have a question...']
       });
     }
@@ -338,5 +338,6 @@ router.get('/standards', async (req, res) => {
 });
 
 export default router;
+
 
 

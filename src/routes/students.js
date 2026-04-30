@@ -73,6 +73,25 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
 
 
 // PATCH /api/student/profile - save onboarding data
+router.post('/profile/onboard', async (req, res) => {
+  try {
+    let { student_id, token, form_level, subjects, preferred_language, onboarding_complete } = req.body;
+    if (!student_id && token) {
+      try {
+        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+        student_id = payload.userId;
+      } catch(_) {}
+    }
+    if (!student_id) return res.status(400).json({ error: 'student_id required' });
+    const { error } = await supabase.from('students').upsert(
+      { id: student_id, form_level, subjects, preferred_language, onboarding_complete },
+      { onConflict: 'id' }
+    );
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.patch('/profile', async (req, res) => {
   try {
     let { student_id, form_level, subjects, onboarding_complete, preferred_language } = req.body;
@@ -115,7 +134,7 @@ router.get('/profile/:studentId', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('students')
-      .select('id, form_level, subjects, onboarding_complete')
+      .select('id, form_level, subjects, onboarding_complete, preferred_language')
       .eq('id', req.params.studentId)
       .maybeSingle();
     if (error) throw error;
@@ -126,6 +145,8 @@ router.get('/profile/:studentId', async (req, res) => {
 });
 
 export default router;
+
+
 
 
 

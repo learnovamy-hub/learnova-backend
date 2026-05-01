@@ -61,7 +61,7 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
       .limit(20);
 
     if (error) {
-      // quiz_results table may not exist yet â€” return empty
+      // quiz_results table may not exist yet Ã¢â‚¬â€ return empty
       return res.json([]);
     }
 
@@ -170,10 +170,10 @@ router.get('/enrolled-subjects/:studentId', async (req, res) => {
       .from('session_logs')
       .select('subject_name')
       .eq('student_id', studentId)
-      .not('subject_name', 'is', null);
+      .not('subject', 'is', null);
 
     const unlockedSubjectNames = new Set(
-      (sessions || []).map(s => s.subject_name).filter(Boolean)
+      (sessions || []).map(s => s.subject).filter(Boolean)
     );
 
     // Subject color map
@@ -193,7 +193,7 @@ router.get('/enrolled-subjects/:studentId', async (req, res) => {
       'Economics':       0xFFA855F7,
     };
 
-    // Build response — enrolled subjects only, mark unlocked status
+    // Build response â€” enrolled subjects only, mark unlocked status
     const subjects = enrolledSubjects.map(name => ({
       name,
       color: colorMap[name] || 0xFF6366F1,
@@ -222,7 +222,7 @@ router.get('/last-session/:studentId', async (req, res) => {
 
     const { data, error } = await supabase
       .from('session_logs')
-      .select('subject_name, topic_name, subtopic_name, started_at, duration_seconds')
+      .select('subject, topic, started_at')
       .eq('student_id', studentId)
       .order('started_at', { ascending: false })
       .limit(1)
@@ -234,11 +234,11 @@ router.get('/last-session/:studentId', async (req, res) => {
 
     res.json({
       session: {
-        subject_name:   data.subject_name,
-        topic_name:     data.topic_name,
-        subtopic_name:  data.subtopic_name,
+        subject_name: data.subject,
+        topic_name: data.topic,
+        subtopic_name: null,
         started_at:     data.started_at,
-        duration_seconds: data.duration_seconds,
+        duration_seconds: null,
       }
     });
   } catch (err) {

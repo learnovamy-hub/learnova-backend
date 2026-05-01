@@ -179,4 +179,158 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
   }
 });
 
+
+// GET /api/parent/session-reports/:studentId
+// Returns recent session quiz results for parent dashboard
+router.get('/session-reports/:studentId', authMiddleware, async (req, res) => {
+  try {
+    // Verify parent is linked to this student
+    const { data: link } = await supabase
+      .from('parent_student_links')
+      .select('id')
+      .eq('parent_id', req.user.userId)
+      .eq('student_id', req.params.studentId)
+      .eq('status', 'approved')
+      .maybeSingle();
+
+    if (!link) return res.status(403).json({ error: 'Not authorised to view this student' });
+
+    // Get quiz results
+    const { data: results, error } = await supabase
+      .from('session_quiz_results')
+      .select('id, subject, topic, score, total, percentage, completed_at, answers')
+      .eq('student_id', req.params.studentId)
+      .order('completed_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    // Get parent notifications (AI-generated summaries)
+    const { data: notifications } = await supabase
+      .from('parent_notifications')
+      .select('subject, topic, score, total, percentage, summary, weak_areas, notified_at')
+      .eq('student_id', req.params.studentId)
+      .order('notified_at', { ascending: false })
+      .limit(5);
+
+    res.json({
+      quiz_results: results || [],
+      notifications: notifications || [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/parent/generate-qr-token
+// Student calls this to generate a linkage QR token
+router.post('/generate-qr-token', authMiddleware, async (req, res) => {
+  try {
+    const token = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min expiry
+
+    await supabase.from('parent_link_tokens').upsert([{
+      student_id: req.user.userId,
+      token,
+      expires_at: expiresAt,
+      used: false,
+    }], { onConflict: 'student_id' });
+
+    res.json({ token, expires_at: expiresAt });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/parent/link-by-token
+// Parent enters or scans QR token to link immediately
+router.post('/link-by-token', authMiddleware, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token required' });
+
+    // Find valid token
+    const { data: linkToken } = await supabase
+      .from('parent_link_tokens')
+      .select('student_id, expires_at, used')
+      .eq('token', token.toUpperCase().trim())
+      .maybeSingle();
+
+    if (!linkToken) return res.status(404).json({ error: 'Invalid code. Please check and try again.' });
+    if (linkToken.used) return res.status(400).json({ error: 'This code has already been used.' });
+    if (new Date(linkToken.expires_at) < new Date()) return res.status(400).json({ error: 'Code has expired. Ask your child to generate a new one.' });
+
+    // Check not already linked
+    const { data: existing } = await supabase
+      .from('parent_student_links')
+      .select('id, status')
+      .eq('parent_id', req.user.userId)
+      .eq('student_id', linkToken.student_id)
+      .maybeSingle();
+
+    if (existing?.status === 'approved') {
+      return res.json({ message: 'Already linked to this student!' });
+    }
+
+    // Create approved link immediately
+    await supabase.from('parent_student_links').upsert([{
+      parent_id: req.user.userId,
+      student_id: linkToken.student_id,
+      status: 'approved',
+      approved_at: new Date().toISOString(),
+    }], { onConflict: 'parent_id,student_id' });
+
+    // Mark token used
+    await supabase.from('parent_link_tokens').update({ used: true }).eq('token', token.toUpperCase().trim());
+
+    // Get student name for response
+    const { data: student } = await supabase
+      .from('students')
+      .select('full_name')
+      .eq('id', linkToken.student_id)
+      .maybeSingle();
+
+    res.json({ message: `Successfully linked to ${student?.full_name ?? 'student'}!` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/parent/link-by-student-id
+// Parent enters student ID — requires student approval
+router.post('/link-by-student-id', authMiddleware, async (req, res) => {
+  try {
+    const { student_id } = req.body;
+    if (!student_id) return res.status(400).json({ error: 'Student ID required' });
+
+    const { data: student } = await supabase
+      .from('students')
+      .select('id, full_name')
+      .eq('id', student_id)
+      .maybeSingle();
+
+    if (!student) return res.status(404).json({ error: 'Student not found. Please check the ID.' });
+
+    const { data: existing } = await supabase
+      .from('parent_student_links')
+      .select('id, status')
+      .eq('parent_id', req.user.userId)
+      .eq('student_id', student_id)
+      .maybeSingle();
+
+    if (existing?.status === 'approved') return res.json({ message: 'Already linked!' });
+    if (existing?.status === 'pending') return res.json({ message: 'Request already sent — waiting for student approval.' });
+
+    await supabase.from('parent_student_links').insert([{
+      parent_id: req.user.userId,
+      student_id,
+      status: 'pending',
+    }]);
+
+    res.json({ message: `Link request sent to ${student.full_name}. Waiting for their approval.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

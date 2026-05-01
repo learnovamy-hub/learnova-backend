@@ -61,7 +61,7 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
       .limit(20);
 
     if (error) {
-      // quiz_results table may not exist yet Ã¢â‚¬â€ return empty
+      // quiz_results table may not exist yet ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â return empty
       return res.json([]);
     }
 
@@ -120,7 +120,7 @@ router.patch('/profile', async (req, res) => {
     if (!student_id) return res.status(400).json({ error: 'student_id required' });
     const { error } = await supabase
       .from('students')
-      .update({ form_level, subjects, onboarding_complete })
+      .update({ form_level, subjects, onboarding_complete, preferred_language })
       .eq('id', student_id);
     if (error) throw error;
     res.json({ success: true });
@@ -193,7 +193,7 @@ router.get('/enrolled-subjects/:studentId', async (req, res) => {
       'Economics':       0xFFA855F7,
     };
 
-    // Build response â€” enrolled subjects only, mark unlocked status
+    // Build response Ã¢â‚¬â€ enrolled subjects only, mark unlocked status
     const subjects = enrolledSubjects.map(name => ({
       name,
       color: colorMap[name] || 0xFF6366F1,

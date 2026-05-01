@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
@@ -19,6 +19,7 @@ import parentRoutes from './routes/parent.js';
 import adminRoutes from './routes/admin.js';
 import workspaceRoutes from './routes/workspace.js';
 import welcomeRoutes from './routes/welcome.js';
+import sessionQuizRoutes from './routes/session_quiz.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

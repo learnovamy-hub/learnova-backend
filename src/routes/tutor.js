@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { getConversationLimit } from '../utils/conversation_limiter.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../config/database.js';
@@ -104,9 +104,11 @@ router.post('/session', async (req, res) => {
       history = [],
       phase = 'intro',
       segment = 0,
-      activeQuestion = null
+      activeQuestion = null,
+      language = 'en'
     } = req.body;
 
+    const langConfig = getLangConfig(language);
     if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
     // â”€â”€ Topic switch detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -152,7 +154,7 @@ router.post('/session', async (req, res) => {
 
       const r = await anthropic.messages.create({
         model: 'claude-sonnet-4-5', max_tokens: 400,
-        system: 'You are a warm, encouraging SPM ' + subject + ' tutor. Be friendly, clear and conversational.',
+        system: 'You are a warm, encouraging SPM ' + subject + ' tutor. Be friendly, clear and conversational. ' + langConfig.suffix,
         messages: [{ role: 'user', content: prompt }]
       });
 

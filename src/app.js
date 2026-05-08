@@ -20,6 +20,8 @@ import adminRoutes from './routes/admin.js';
 import workspaceRoutes from './routes/workspace.js';
 import welcomeRoutes from './routes/welcome.js';
 import sessionQuizRoutes from './routes/session_quiz.js';
+import animationRoutes from './routes/animations.js';
+import ttsRoutes from './routes/tts.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -77,6 +79,9 @@ app.use('/api/parent', parentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/workspace', workspaceRoutes);
 app.use('/api/tutor/welcome', welcomeRoutes);
+app.use('/api/session-quiz', sessionQuizRoutes);
+app.use('/api/animations', animationRoutes);
+app.use('/api/tts', ttsRoutes);
 
 // ============================================================================
 // 404 HANDLER

@@ -15,6 +15,22 @@ function getLangConfig(lang) { return LANGUAGE_CONFIG[lang] || LANGUAGE_CONFIG.e
 
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
+// ── HARDCODED PEDAGOGY RULES ── applied to every system prompt, always ──────
+// These never change regardless of topic, subject, or phase.
+const PEDAGOGY_RULES = `
+TEACHING STYLE - THESE RULES ARE ABSOLUTE AND CANNOT BE OVERRIDDEN:
+- Maximum 2-3 short sentences per reply. Never more. Never.
+- Always end with exactly ONE question to the student. One question only.
+- NEVER lecture or dump information. Guide through questions and discovery.
+- NEVER use bullet points, numbered lists, headers, bold text, or markdown.
+- NEVER use emojis or special symbols of any kind.
+- Plain conversational sentences only - write exactly as a tutor speaks out loud.
+- If a student is confused, ask a simpler question, do not re-explain everything.
+- Celebrate correct answers warmly in one sentence, then move on with a question.
+- Check understanding frequently - do not proceed until student confirms they get it.
+- Be warm, encouraging, and patient like a favourite teacher sitting next to the student.
+`.trim();
+
 // â”€â”€â”€ DB helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function getLesson(subject, topic) {
@@ -188,7 +204,7 @@ router.post('/session', async (req, res) => {
 
       const r = await anthropic.messages.create({
         model: 'claude-sonnet-4-5', max_tokens: 400,
-        system: 'You are a warm, encouraging SPM ' + subject + ' tutor. Be friendly, clear and conversational. ' + langConfig.suffix,
+        system: 'You are a warm, encouraging SPM ' + subject + ' tutor.\n\n' + PEDAGOGY_RULES + '\n\n' + langConfig.suffix,
         messages: [{ role: 'user', content: prompt }]
       });
 
@@ -279,17 +295,11 @@ router.post('/session', async (req, res) => {
       ? '\nYou are teaching Standard ' + currentStandard.code + ': ' + currentStandard.description + '\nThis is standard ' + (segment + 1) + ' of ' + totalStandards + ' for this topic.'
       : '';
 
-    const system = 'You are a warm, friendly SPM ' + subject + ' tutor guiding a student through “' + topic + '”.\n'
-      + standardContext
-      + '\nCRITICAL RULES — follow exactly:\n'
-      + '- The student already sees a VISUAL ANIMATION on their screen showing the concept step by step. DO NOT re-explain the visual content.\n'
-      + '- Your role is CONVERSATION GUIDE only: ask questions, check understanding, give encouragement, nudge thinking.\n'
-      + '- Maximum 2-3 short sentences per reply. Never more.\n'
-      + '- NO bullet points. NO numbered lists. NO headers. NO markdown. NO emojis. NO special symbols. Plain conversational sentences only.\n'
-      + '- Always end with exactly ONE short question to the student.\n'
-      + '- Do NOT dump full explanations. Do NOT list rules or steps.\n'
-      + '- Be warm and encouraging like a friendly tutor sitting next to the student.\n'
-      + (currentStandard ? '- This reply is about Standard ' + currentStandard.code + ': ' + currentStandard.description + '\n' : '')
+    const system = 'You are a warm, friendly SPM ' + subject + ' tutor guiding a student through “' + topic + '”.'
+      + standardContext + '\n\n'
+      + PEDAGOGY_RULES + '\n\n'
+      + 'CONTEXT: The student already sees a VISUAL ANIMATION on their screen. DO NOT re-explain what the animation shows. Your role is conversation guide only: ask questions, check understanding, give encouragement.\n'
+      + (currentStandard ? 'Current standard: ' + currentStandard.code + ' - ' + currentStandard.description + '\n' : '')
       + langConfig.suffix;
 
     const userMsg = currentStandard
@@ -298,7 +308,7 @@ router.post('/session', async (req, res) => {
 
     const msgs = history.slice(-4).concat([{ role: 'user', content: userMsg }]);
     const r = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5', max_tokens: 200, system: system, messages: msgs
+      model: 'claude-sonnet-4-5', max_tokens: 280, system: system, messages: msgs
     });
 
     const reply = r.content[0].text

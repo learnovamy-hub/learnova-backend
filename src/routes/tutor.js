@@ -188,212 +188,24 @@ router.post('/session', async (req, res) => {
 
     // â”€â”€ INTRO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (message === 'start' || phase === 'intro') {
-      const intro = lesson
-        ? (lesson.introduction || (lesson.content || '').substring(0, 600))
-        : null;
-
-      const standardsList = standards.length > 0
-        ? '\n\nIn this topic you will master ' + totalStandards + ' learning standards:\n' +
-          standards.slice(0, 5).map(function(s) { return '- ' + s.code + ': ' + s.description.substring(0, 60) + '...'; }).join('\n') +
-          (standards.length > 5 ? '\n...and ' + (standards.length - 5) + ' more.' : '')
-        : '';
-
-      const prompt = intro
-        ? 'Deliver this introduction warmly in 2-3 short paragraphs. End by asking if they are ready for the first concept. Do NOT teach concepts yet.\n\n' + intro + standardsList
-        : 'Give a brief 2-paragraph introduction to ' + topic + ' in SPM ' + subject + '. Mention there are ' + totalStandards + ' learning standards to cover. End by asking if ready.';
-
       const r = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5', max_tokens: 400,
-        system: 'You are a warm, encouraging SPM ' + subject + ' tutor.\n\n' + PEDAGOGY_RULES + '\n\n' + langConfig.suffix,
-        messages: [{ role: 'user', content: prompt }]
-      });
+        model: 'claude-sonnet-4-5', max_tokens: 100,
+        system: 'You are a warm, friendly SPM ' + subject + ' tutor.
 
+' + PEDAGOGY_RULES + '
+
+' + langConfig.suffix,
+        messages: [{ role: 'user', content: 'The student just chose "' + topic + '". Greet them in ONE warm sentence, then ask ONE question: what do they already know about this topic? No lists, no overviews, no content yet.' }]
+      });
       return res.json({
         reply: r.content[0].text.trim(),
         phase: 'concept', segment: 0, isCheckIn: false, activeQuestion: null,
         topicSwitchSuggested: false,
         standardCode: standards.length > 0 ? standards[0].code : null,
         standardDesc: standards.length > 0 ? standards[0].description : null,
-        standardsProgress: standards.length > 0 ? 'Standard ' + standards[0].code + ' (1 of ' + totalStandards + ')' : null,
-        totalStandards: totalStandards,
-        suggestedResponses: ["Yes, I'm ready! Let's start", 'Tell me more first', 'I have a question...']
+        standardsProgress: null,
+        suggestedResponses: ['Starting fresh, never heard of it!', 'I know a little bit', 'I have studied this before']
       });
     }
-
-    // â”€â”€ QUIZ ANSWER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (phase === 'quiz_answer' && activeQuestion) {
-      const q = activeQuestion;
-      const studentAns = message.trim().toUpperCase().charAt(0);
-      const correct = studentAns === (q.correct_answer || '').toUpperCase();
-      const nextStandard = getStandardForSegment(standards, segment + 1);
-
-      if (correct) {
-        const nextMsg = nextStandard
-          ? '\n\nNext up: **Standard ' + nextStandard.code + '**  -  ' + nextStandard.description.substring(0, 60) + '...'
-          : '\n\nYou\'ve covered all the standards for this topic! ';
-        return res.json({
-          reply: 'Correct! Well done!\n\n' + (q.explanation || 'Great work!') + nextMsg,
-          phase: 'concept', segment: segment + 1, isCheckIn: false, activeQuestion: null,
-          topicSwitchSuggested: false,
-          standardCode: nextStandard ? nextStandard.code : null,
-          standardDesc: nextStandard ? nextStandard.description : null,
-          standardsProgress: nextStandard ? 'Standard ' + nextStandard.code + ' (' + (segment + 2) + ' of ' + totalStandards + ')' : 'Topic Complete!',
-          suggestedResponses: ['Continue!', 'I have a question...', 'Give me another question!']
-        });
-      }
-
-      return res.json({
-        reply: 'Not quite  -  the correct answer is **' + q.correct_answer + '**\n\n' + (q.explanation || 'Review this concept.') + '\n\nShall we continue?',
-        phase: 'concept', segment: segment + 1, isCheckIn: false, activeQuestion: null,
-        topicSwitchSuggested: false,
-        standardCode: currentStandard ? currentStandard.code : null,
-        standardDesc: currentStandard ? currentStandard.description : null,
-        standardsProgress: standardsProgress,
-        suggestedResponses: ['I understand, continue', 'Explain why please', 'Give me another question']
-      });
-    }
-
-    // â”€â”€ PRACTICE REQUEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const msgLower = message.toLowerCase();
-    const wantsQuestion = msgLower.includes('practice') || msgLower.includes('give me a question') ||
-      msgLower.includes('quiz') || msgLower.includes('soalan') || msgLower.includes('test me') ||
-      msgLower.includes('practice question');
-
-    if (wantsQuestion) {
-      if (practiceQuestions.length > 0) {
-        const idx = Math.min(segment, practiceQuestions.length - 1);
-        const q = practiceQuestions[idx];
-        let opts = '';
-        if (q.options && typeof q.options === 'object') {
-          opts = Object.entries(q.options).map(function(e) { return e[0] + '. ' + e[1]; }).join('\n');
-        }
-        const standardTag = currentStandard ? '\n\n_Testing: Standard ' + currentStandard.code + '_' : '';
-        return res.json({
-          reply: '**Practice Question:**\n\n' + q.question + '\n\n' + opts + '\n\nType A, B, C or D  -  or use the workspace!' + standardTag,
-          phase: 'quiz_answer', segment: segment, isCheckIn: false, activeQuestion: q,
-          topicSwitchSuggested: false,
-          standardCode: currentStandard ? currentStandard.code : null,
-          standardDesc: currentStandard ? currentStandard.description : null,
-          standardsProgress: standardsProgress,
-          suggestedResponses: ['A', 'B', 'C', 'D'], openWorkspace: true
-        });
-      }
-      return res.json({
-        reply: "No practice questions yet for this topic  -  let's continue the lesson!",
-        phase: 'concept', segment: segment, isCheckIn: false, activeQuestion: null,
-        topicSwitchSuggested: false, standardCode: null, standardDesc: null, standardsProgress: standardsProgress,
-        suggestedResponses: ['Continue the lesson', 'I have a question...']
-      });
-    }
-
-    // â”€â”€ CONCEPT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const lessonContent = lesson ? (lesson.content || lesson.worked_examples || '') : '';
-    const chunks = lessonContent.split('\n\n').filter(function(c) { return c.trim().length > 50; });
-    const currentChunk = chunks[segment] || null;
-
-    const standardContext = currentStandard
-      ? '\nYou are teaching Standard ' + currentStandard.code + ': ' + currentStandard.description + '\nThis is standard ' + (segment + 1) + ' of ' + totalStandards + ' for this topic.'
-      : '';
-
-    const system = 'You are a warm, friendly SPM ' + subject + ' tutor guiding a student through “' + topic + '”.'
-      + standardContext + '\n\n'
-      + PEDAGOGY_RULES + '\n\n'
-      + 'CONTEXT: The student already sees a VISUAL ANIMATION on their screen. DO NOT re-explain what the animation shows. Your role is conversation guide only: ask questions, check understanding, give encouragement.\n'
-      + (currentStandard ? 'Current standard: ' + currentStandard.code + ' - ' + currentStandard.description + '\n' : '')
-      + langConfig.suffix;
-
-    const userMsg = currentStandard
-      ? 'The student can see the visual animation for Standard ' + currentStandard.code + ': “' + currentStandard.description + '”. Student said: ' + message + '\n\nRespond conversationally in 2-3 sentences max. End with one question.'
-      : 'Student said: ' + message + '\n\nRespond conversationally in 2-3 sentences max. End with one question.';
-
-    const msgs = history.slice(-4).concat([{ role: 'user', content: userMsg }]);
-    const r = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5', max_tokens: 280, system: system, messages: msgs
-    });
-
-    const reply = r.content[0].text
-      .trim()
-      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')   // remove emoji (supplementary plane)
-      .replace(/[\u{2600}-\u{27BF}]/gu, '')       // remove misc symbols & dingbats
-      .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')     // remove more emoji ranges
-      .replace(/\s{2,}/g, ' ')                    // collapse double spaces left behind
-      .trim();
-    const rl = reply.toLowerCase();
-    const isCheckIn = rl.includes('faham') || rl.includes('make sense') ||
-      rl.includes('any questions') || rl.includes('understand') ||
-      rl.includes('okay?') || rl.includes('ready') || rl.includes('shall we');
-
-    return res.json({
-      reply: reply,
-      phase: 'concept',
-      segment: isCheckIn ? segment : segment + 1,
-      isCheckIn: isCheckIn,
-      activeQuestion: null,
-      topicSwitchSuggested: false,
-      standardCode: currentStandard ? currentStandard.code : null,
-      standardDesc: currentStandard ? currentStandard.description : null,
-      standardsProgress: standardsProgress,
-      totalStandards: totalStandards,
-      suggestedResponses: isCheckIn
-        ? ['Yes, I understand! Continue', 'I have a question...', 'Explain again please', 'Give me a practice question!']
-        : ['Continue please!', 'I have a question...', 'Give me a practice question!']
-    });
-
-  } catch (err) {
-    console.error('Tutor error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// â”€â”€â”€ GET /api/tutor/topics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-router.get('/topics', async (req, res) => {
-  try {
-    const { language = 'en', claudeCallCount = 0, subject = 'Mathematics' } = req.query;
-    const { data, error } = await supabase
-      .from('lessons')
-      .select('id, title, topic, form_level, learning_objectives')
-      .eq('subject', subject)
-      .eq('status', 'published')
-      .order('chapter_number', { ascending: true });
-    if (error) throw error;
-    res.json(data || []);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// â”€â”€â”€ GET /api/tutor/standards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-router.get('/standards', async (req, res) => {
-  try {
-    const { language = 'en', claudeCallCount = 0, subject, topic, student_id } = req.query;
-    let query = supabase.from('learning_standards').select('*');
-    if (subject) query = query.eq('subject', subject);
-    if (topic)   query = query.ilike('topic', '%' + topic + '%');
-    query = query.order('code', { ascending: true });
-    const { data, error } = await query;
-    if (error) throw error;
-
-    // If student_id, also get their completed standards
-    let completed = [];
-    if (student_id) {
-      const { data: ws } = await supabase
-        .from('workspace_submissions')
-        .select('standard_code')
-        .eq('student_id', student_id)
-        .not('standard_code', 'is', null);
-      completed = (ws || []).map(function(w) { return w.standard_code; });
-    }
-
-    const standards = (data || []).map(function(s) {
-      return Object.assign({}, s, { completed: completed.includes(s.code) });
-    });
-
-    res.json({ standards: standards, total: standards.length, completed_count: completed.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-export default router;
-
-
 
 

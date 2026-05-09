@@ -80,16 +80,28 @@ export async function createStudent(userId, parentId, formLevel, schoolName) {
 
 /**
  * Get student by user ID
+ * Students created at signup have id=userId but user_id=null, so we try both.
  */
 export async function getStudentByUserId(userId) {
+  // Try user_id column first (newer rows)
   const { data, error } = await supabase
     .from('students')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error && error.code !== 'PGRST116') throw error;
-  return data;
+  if (data) return data;
+
+  // Fallback: try id column (older rows created at signup with id=userId)
+  const { data: byId, error: e2 } = await supabase
+    .from('students')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (e2 && e2.code !== 'PGRST116') throw e2;
+  return byId;
 }
 
 /**

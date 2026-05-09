@@ -277,19 +277,31 @@ router.patch('/update-form', authMiddleware, async (req, res) => {
 
     const { supabase } = await import('../config/database.js');
 
-    // Try updating by user_id first
-    let { error } = await supabase
+    // Try update by user_id — if row exists this is enough
+    const { error: e1, count: c1 } = await supabase
       .from('students')
       .update({ form_level })
-      .eq('user_id', req.user.userId);
+      .eq('user_id', req.user.userId)
+      .select('id', { count: 'exact', head: true });
 
-    // Fall back to id column if user_id row not found/updated
-    if (error) {
-      const { error: err2 } = await supabase
+    // If update hit 0 rows (no student row with user_id), upsert by id
+    if (e1 || c1 === 0) {
+      const { error: e2 } = await supabase
         .from('students')
-        .update({ form_level })
-        .eq('id', req.user.userId);
-      if (err2) throw err2;
+        .upsert(
+          { id: req.user.userId, form_level },
+          { onConflict: 'id', ignoreDuplicates: false }
+        );
+      // Also try user_id upsert as last resort
+      if (e2) {
+        const { error: e3 } = await supabase
+          .from('students')
+          .upsert(
+            { user_id: req.user.userId, form_level },
+            { onConflict: 'user_id', ignoreDuplicates: false }
+          );
+        if (e3) throw e3;
+      }
     }
 
     res.json({ ok: true, form_level });

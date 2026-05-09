@@ -278,7 +278,18 @@ router.post('/session', async (req, res) => {
       ? 'The student can see the visual animation for Standard ' + currentStandard.code + ': "' + currentStandard.description + '". Student said: ' + message + '\n\nRespond conversationally in 2-3 sentences max. End with one question.'
       : 'Student said: ' + message + '\n\nRespond conversationally in 2-3 sentences max. End with one question.';
 
-    const msgs = history.slice(-4).concat([{ role: 'user', content: userMsg }]);
+    // Sanitize history for Anthropic: must start with 'user', no consecutive same roles,
+    // and remove trailing user message (current student input is sent separately as userMsg).
+    let safeHistory = history.slice(-6);
+    // Drop trailing user message — we send student input via userMsg below
+    if (safeHistory.length > 0 && safeHistory[safeHistory.length - 1].role === 'user') {
+      safeHistory = safeHistory.slice(0, -1);
+    }
+    // Drop leading assistant messages — Anthropic requires first message to be 'user'
+    while (safeHistory.length > 0 && safeHistory[0].role !== 'user') {
+      safeHistory.shift();
+    }
+    const msgs = safeHistory.concat([{ role: 'user', content: userMsg }]);
     const r = await anthropic.messages.create({
       model: 'claude-sonnet-4-5', max_tokens: 280, system: system, messages: msgs
     });

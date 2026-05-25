@@ -354,13 +354,13 @@ function selectTeachingStrategy(pedagogyTypes) {
 // Uses Claude Haiku (fast, cheap) to generate a structured visual spec.
 
 const VISUAL_TYPES = {
-  // topic keyword â†’ preferred visual type
-  'trigonometry': 'desmos', 'sine': 'desmos', 'cosine': 'desmos', 'tangent': 'desmos',
-  'graph': 'desmos', 'function': 'desmos', 'curve': 'desmos', 'linear': 'desmos',
-  'quadratic': 'desmos', 'exponential': 'desmos', 'logarithm': 'desmos',
-  'matrix': 'math_working', 'matrices': 'math_working', 'simultaneous': 'math_working',
-  'variation': 'math_working', 'inverse': 'math_working', 'proof': 'math_working',
-  'probability': 'chart', 'distribution': 'chart', 'statistics': 'chart', 'data': 'chart',
+  // topic keyword -> preferred visual type
+  ‘trigonometry’: ‘graph’, ‘sine’: ‘graph’, ‘cosine’: ‘graph’, ‘tangent’: ‘graph’,
+  ‘graph’: ‘graph’, ‘function’: ‘graph’, ‘curve’: ‘graph’, ‘linear’: ‘graph’,
+  ‘quadratic’: ‘graph’, ‘exponential’: ‘graph’, ‘logarithm’: ‘graph’,
+  ‘matrix’: ‘math_working’, ‘matrices’: ‘math_working’, ‘simultaneous’: ‘math_working’,
+  ‘variation’: ‘math_working’, ‘inverse’: ‘math_working’, ‘proof’: ‘math_working’,
+  ‘probability’: ‘chart’, ‘distribution’: ‘chart’, ‘statistics’: ‘chart’, ‘data’: ‘chart’,
 };
 
 function guessVisualType(topic) {
@@ -387,25 +387,30 @@ Teaching phase: ${segment + 1}
 Tutor just said: "${reply.substring(0, 200)}"
 
 Generate a visual that DIRECTLY supports what the tutor said. Choose the best type:
-- "math_working" â†’ step-by-step algebraic or numeric calculations with LaTeX
-- "desmos" â†’ function graphs, curves, geometric plots (DO NOT use for pure algebra)
-- "chart" â†’ bar/line charts for statistical data
-- "none" â†’ tutor asked a conversational question only, no calculation shown
+- "math_working" -> step-by-step working shown as plain text (algebra, matrices, arithmetic)
+- "graph" -> function graphs, curves, geometric plots (functions, sine/cosine, quadratics)
+- "chart" -> bar/line charts for statistical data
+- "none" -> tutor asked a conversational question only, no calculation needed
 
-IMPORTANT LaTeX rules: use double backslash in JSON strings (\\\\sin not \\sin). Keep LaTeX simple and valid.
+CRITICAL: For math_working use PLAIN TEXT only - no LaTeX, no backslashes.
+Use: x^2 for powers, sqrt(x) for roots, (a+b)/c for fractions.
+For matrices write rows on separate lines like: [ 2  3 ] and [ 1 -5 ]
+Each step shows ONE clear concept or calculation.
 
 Respond ONLY with JSON, no markdown:
 {
-  "type": "math_working|desmos|chart|none",
+  "type": "math_working|graph|chart|none",
   "math_working": {
     "title": "short title",
-    "steps": [{"label": "what this step shows", "latex": "LaTeX string"}]
+    "steps": [{"label": "what this step shows", "math": "plain text expression"}]
   },
-  "desmos": {
+  "graph": {
     "title": "short title",
-    "expressions": ["LaTeX expression â€" e.g. y=\\\\sin(x)"],
-    "bounds": {"left": -360, "right": 360, "bottom": -2, "top": 2},
-    "degreeMode": true
+    "equation_type": "quadratic|linear|cubic|sine|cosine|inverse",
+    "a": 1, "b": 0, "c": 0, "d": 0,
+    "x_min": -5, "x_max": 5, "y_min": -5, "y_max": 5,
+    "x_label": "x", "y_label": "y",
+    "key_points": [{"x": 0, "y": 0, "label": "Titik", "color": "cyan"}]
   },
   "chart": {
     "title": "short title",
@@ -425,9 +430,9 @@ Respond ONLY with JSON, no markdown:
     const raw = r.content[0].text.trim().replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(raw);
     if (!parsed.type || parsed.type === 'none') return null;
-    // Clean up nulls â€" remove fields that don't match the type
+    // Clean up fields that don't match the type
     if (parsed.type !== 'math_working') delete parsed.math_working;
-    if (parsed.type !== 'desmos') delete parsed.desmos;
+    if (parsed.type !== 'graph') delete parsed.graph;
     if (parsed.type !== 'chart') delete parsed.chart;
     return parsed;
   } catch (e) {
@@ -831,21 +836,27 @@ router.post('/session', async (req, res) => {
       const introUserMsg = pre_read
         ? 'Pelajar baru sahaja selesai membaca pengenalan topik "' + topic + '". Jangan bagi pengenalan lagi. Tanya dengan mesra apa yang mereka faham dari bacaan tadi. Satu soalan sahaja, satu ayat sahaja.'
         : 'The student just chose "' + topic + '".' + introHook + ' No lists, no overviews, no content yet. ONE warm sentence + ONE question only.';
-      let introReply = null;
-      try {
-        introReply = await callDeepSeek(introSystem, introUserMsg, 120);
-      } catch (e) { console.log('DeepSeek intro fallback:', e.message); }
-      if (!introReply || introReply.trim().length < 10) {
-        const r = await anthropic.messages.create({
-          model: 'claude-sonnet-4-5', max_tokens: 120,
-          system: introSystem,
-          messages: [{ role: 'user', content: introUserMsg }]
-        });
-        introReply = r.content[0].text;
-      }
-      const r = { content: [{ text: introReply }] };
+
+      // Run intro reply and visual generation in parallel
+      const [introReply, introVisual] = await Promise.all([
+        (async () => {
+          try {
+            const ds = await callDeepSeek(introSystem, introUserMsg, 120);
+            if (ds && ds.trim().length >= 10) return ds.trim();
+          } catch (e) { console.log('DeepSeek intro fallback:', e.message); }
+          const r = await anthropic.messages.create({
+            model: 'claude-sonnet-4-5', max_tokens: 120,
+            system: introSystem,
+            messages: [{ role: 'user', content: introUserMsg }]
+          });
+          return r.content[0].text;
+        })(),
+        generateVisual(subject, topic, 'Pengenalan ' + topic, 0, pedagogyResult),
+      ]);
+
       return res.json({
-        reply: r.content[0].text.trim(),
+        reply: introReply.trim(),
+        visual: introVisual || null,
         phase: 'concept', segment: 0, isCheckIn: false, activeQuestion: null,
         topicSwitchSuggested: false,
         standardCode: standards.length > 0 ? standards[0].code : null,

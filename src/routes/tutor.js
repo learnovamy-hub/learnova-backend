@@ -187,7 +187,7 @@ TEACHING STYLE - THESE RULES ARE ABSOLUTE AND CANNOT BE OVERRIDDEN:
 - Plain conversational sentences only - write exactly as a tutor speaks out loud.
 - If a student is confused, ask a simpler question, do not re-explain everything.
 - Celebrate correct answers warmly in one sentence, then move on with a question.
-- Check understanding frequently - do not proceed until student confirms they get it.
+- Check understanding SPARINGLY — only every 3-4 exchanges, not after every sentence. NEVER use the phrase "do you see why students get confused at this point?" — it sounds robotic. Instead, vary your check-ins naturally: "Faham tak?", "Boleh buat?", "Ada apa-apa soalan?", "Clear ke?", "Okay dengan ni?", "Nak cuba soal diri sendiri?". Use whichever fits the moment.
 - Be warm, encouraging, and patient like a favourite teacher sitting next to the student.
 `.trim();
 
@@ -228,6 +228,20 @@ const CHARACTER_PROFILES = {
     allow_emoji: true,
   },
 };
+
+// Returns true if the name sounds Malay/Muslim — use Assalamualaikum greeting
+function isMalayName(name) {
+  if (!name || typeof name !== 'string') return false;
+  const n = name.toLowerCase().trim();
+  const prefixes = [
+    'muhammad', 'muhamad', 'mohammad', 'mohammed', 'mohamad', 'mohd',
+    'ahmad', 'ahmed', 'abd', 'abdul', 'nurul', 'nur ', 'noor', 'nor ',
+    'siti', 'aisyah', 'aishah', 'fatimah', 'zainab', 'hafiz', 'syafiq',
+    'amirul', 'izzat', 'aiman', 'arif', 'azri', 'razak', 'rahim', 'rashid',
+  ];
+  if (/ bin | binti | bt\. | bt | b\. /i.test(name)) return true;
+  return prefixes.some(p => n.startsWith(p));
+}
 
 // Wraps a system prompt with character persona. Returns unchanged if nova.
 function withCharacter(systemPrompt, charProfile) {
@@ -801,6 +815,7 @@ router.post('/session', async (req, res) => {
       session_id = null,
       pre_read = false,
       character = 'nova',
+      student_name = '',
     } = req.body;
 
     const effectiveSessionId = session_id || (student_id ? `${student_id}_${Date.now()}` : `anon_${Date.now()}`);
@@ -894,10 +909,16 @@ router.post('/session', async (req, res) => {
         teachingStrategy, language: effectiveLanguage,
         pedagogySample,
       }), charProfile);
+      // Build greeting hint: Assalamualaikum for Malay names, else casual
+      const firstName = student_name ? student_name.split(' ')[0] : '';
+      const greetingHint = isMalayName(student_name)
+        ? `Start with "Assalamualaikum ${firstName}!" as the greeting. `
+        : (firstName ? `Greet them casually with their name "${firstName}". ` : '');
+
       // Try DeepSeek first for intro (cheaper)
       const introUserMsg = pre_read
-        ? 'Pelajar baru sahaja selesai membaca pengenalan topik "' + topic + '". Jangan bagi pengenalan lagi. Tanya dengan mesra apa yang mereka faham dari bacaan tadi. Satu soalan sahaja, satu ayat sahaja.'
-        : 'The student just chose "' + topic + '".' + introHook + ' No lists, no overviews, no content yet. ONE warm sentence + ONE question only.';
+        ? greetingHint + 'Pelajar baru sahaja selesai membaca pengenalan topik "' + topic + '". Jangan bagi pengenalan lagi. Tanya dengan mesra apa yang mereka faham dari bacaan tadi. Satu soalan sahaja, satu ayat sahaja.'
+        : greetingHint + 'The student just chose "' + topic + '".' + introHook + ' No lists, no overviews, no content yet. ONE warm sentence + ONE question only.';
 
       // Run intro reply and visual generation in parallel
       const [introReply, introVisual] = await Promise.all([

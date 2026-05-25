@@ -191,7 +191,54 @@ TEACHING STYLE - THESE RULES ARE ABSOLUTE AND CANNOT BE OVERRIDDEN:
 - Be warm, encouraging, and patient like a favourite teacher sitting next to the student.
 `.trim();
 
-// â"€â"€â"€ DB helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+// ─── Strip LaTeX from math text (AI sometimes outputs LaTeX despite instructions) ───
+function cleanMathText(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    .replace(/\\begin\{[^}]+\}/g, '').replace(/\\end\{[^}]+\}/g, '')
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+    .replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)')
+    .replace(/\\left[\(\[\{|]/g, '(').replace(/\\right[\)\]\}|]/g, ')')
+    .replace(/\\times/g, ' x ').replace(/\\div/g, ' / ').replace(/\\cdot/g, '.')
+    .replace(/\\pm/g, '+/-').replace(/\\geq/g, '>=').replace(/\\leq/g, '<=')
+    .replace(/\\neq/g, '!=').replace(/\\infty/g, 'inf')
+    .replace(/\\theta/g, 'θ').replace(/\\pi/g, 'π').replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β')
+    .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, '$1').replace(/\\[a-zA-Z]+\b/g, '')
+    .replace(/\\\\/g, '; ').replace(/\$/g, '').replace(/[{}]/g, '').trim();
+}
+
+// ─── Character profiles — add-on persona layer, never modifies Nova default ──
+const CHARACTER_PROFILES = {
+  nova: null, // DB default — warm BM tutor, no override
+  sarjan: {
+    display_name: 'Sarjan Rex',
+    style: 'Kamu adalah Sarjan Rex, jurulatih disiplin yang tegas. Jawapan mestilah ringkas dan langsung. Nada: tegas, profesional, tanpa basa-basi. Guna frasa seperti "Fokus!", "Bagus. Teruskan.", "Tiada alasan." Pujian hanya bila betul-betul layak. Tetap ajar dengan tepat.',
+  },
+  sensei: {
+    display_name: 'Sensei Yuki',
+    style: 'Kamu adalah Sensei Yuki, guru bergaya anime yang bersemangat. Dramatik, penuh semangat. Boleh guna "Sugoi!", "Gambatte!", "Nani?!", "Ii ne~". Setiap jawapan betul adalah kemenangan epik. Tetap ajar dengan betul dan tepat.',
+  },
+  bestie: {
+    display_name: 'Bestie Alia',
+    style: 'Kamu adalah Alia, bestie yang tengah study sama-sama. Santai, casual, Gen Z Malaysia. Guna "bro", "eh serious", "W sangat", "lowkey senang je", "no cap", "fr fr". Supportive tapi honest. Tetap ajar dengan betul.',
+  },
+  chaos: {
+    display_name: 'Chaos-chan',
+    style: 'Kamu adalah Chaos-chan, tutor gila-gila energetik dan wild. CAPS untuk emphasis, Malaysian Gen Z energy. React dengan "BROOO!", "YO!", "HARAM BETUL KENA INGAT NI!". Tetap ajar dengan BETUL tapi dengan hype maksimum. OVERRIDE RULE: Boleh guna CAPS dan emoji 🔥💀⚡ — ini adalah gaya yang dipilih pelajar.',
+    allow_emoji: true,
+  },
+};
+
+// Wraps a system prompt with character persona. Returns unchanged if nova.
+function withCharacter(systemPrompt, charProfile) {
+  if (!charProfile) return systemPrompt;
+  const block = '\n\nCHARACTER PERSONA (apply to ALL responses in this session):\n' + charProfile.style;
+  return charProfile.allow_emoji
+    ? systemPrompt + block + '\n\nFINAL OVERRIDE: Emojis and CAPS are explicitly allowed — the student chose this character.'
+    : systemPrompt + block;
+}
+
+// ─── DB helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 async function getLesson(subject, topic) {
   const { data } = await supabase
@@ -434,6 +481,14 @@ Respond ONLY with JSON, no markdown:
     if (parsed.type !== 'math_working') delete parsed.math_working;
     if (parsed.type !== 'graph') delete parsed.graph;
     if (parsed.type !== 'chart') delete parsed.chart;
+    // Strip any LaTeX the AI snuck in despite the prompt
+    if (parsed.math_working?.steps) {
+      parsed.math_working.steps = parsed.math_working.steps.map(s => ({
+        ...s,
+        math: cleanMathText(s.math || ''),
+        label: cleanMathText(s.label || ''),
+      }));
+    }
     return parsed;
   } catch (e) {
     console.error('Visual gen error:', e.message);
@@ -745,6 +800,7 @@ router.post('/session', async (req, res) => {
       student_id = null,
       session_id = null,
       pre_read = false,
+      character = 'nova',
     } = req.body;
 
     const effectiveSessionId = session_id || (student_id ? `${student_id}_${Date.now()}` : `anon_${Date.now()}`);
@@ -819,19 +875,25 @@ router.post('/session', async (req, res) => {
       ? 'Standard ' + currentStandard.code + ' (' + (segment + 1) + ' of ' + totalStandards + ')'
       : null;
 
+    // Character persona resolution
+    const charProfile = CHARACTER_PROFILES[character] || null;
+    const effectivePersonality = charProfile
+      ? { ...personality, rules: { ...(personality?.rules || {}), prompt_style: charProfile.style } }
+      : personality;
+
     // â"€â"€ INTRO: one conversational question, no content dump â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (message === 'start' || phase === 'intro') {
       const pj = pedagogyResult?.pedagogy_json;
       const introHook = pj?.opening_hook
         ? ' Your opening strategy: ' + pj.opening_hook
         : ' Greet them warmly, then ask ONE question about what they already know.';
-      const introSystem = buildMasterSystemPrompt({
+      const introSystem = withCharacter(buildMasterSystemPrompt({
         role: 'a warm, friendly SPM ' + subject + ' tutor',
         subject, topic, standardContext: '',
-        pedagogy: pedagogyResult, anchors, misconceptions, personality,
+        pedagogy: pedagogyResult, anchors, misconceptions, personality: effectivePersonality,
         teachingStrategy, language: effectiveLanguage,
         pedagogySample,
-      });
+      }), charProfile);
       // Try DeepSeek first for intro (cheaper)
       const introUserMsg = pre_read
         ? 'Pelajar baru sahaja selesai membaca pengenalan topik "' + topic + '". Jangan bagi pengenalan lagi. Tanya dengan mesra apa yang mereka faham dari bacaan tadi. Satu soalan sahaja, satu ayat sahaja.'
@@ -1016,13 +1078,13 @@ router.post('/session', async (req, res) => {
 
     if (studentConfused) {
       // Confusion protocol â€" fresh angle, use a memory anchor or analogy
-      system = buildMasterSystemPrompt({
+      system = withCharacter(buildMasterSystemPrompt({
         role: 'a patient SPM ' + subject + ' tutor. The student is confused about "' + topic + '"',
         subject, topic, standardContext,
-        pedagogy: pedagogyResult, anchors, misconceptions, personality,
+        pedagogy: pedagogyResult, anchors, misconceptions, personality: effectivePersonality,
         teachingStrategy, language: effectiveLanguage,
         pedagogySample,
-      }) + '\n\nCONFUSION PROTOCOL â€" FOLLOW EXACTLY:\n'
+      }), charProfile) + '\n\nCONFUSION PROTOCOL â€" FOLLOW EXACTLY:\n'
         + '1. Do NOT repeat the previous explanation.\n'
         + '2. Choose ONE fresh strategy: use a memory anchor from MEMORY ANCHORS above, try a real-world analogy, or break the concept into the single smallest possible step.\n'
         + '3. Extremely simple language â€" as if explaining to a 12-year-old.\n'
@@ -1032,13 +1094,13 @@ router.post('/session', async (req, res) => {
       userMsg = 'Student is confused and said: "' + message + '"\n\n'
         + 'Use a completely fresh angle â€" try a memory anchor, analogy, or the smallest possible step from the TEACHING PROTOCOL. 2 sentences max, then one simple question.';
     } else {
-      system = buildMasterSystemPrompt({
+      system = withCharacter(buildMasterSystemPrompt({
         role: 'a warm, friendly SPM ' + subject + ' tutor guiding a student through "' + topic + '"',
         subject, topic, standardContext,
-        pedagogy: pedagogyResult, anchors, misconceptions, personality,
+        pedagogy: pedagogyResult, anchors, misconceptions, personality: effectivePersonality,
         teachingStrategy, language: effectiveLanguage,
         pedagogySample,
-      }) + '\nCONTEXT: The student already sees a VISUAL ANIMATION. DO NOT re-describe the animation. Your role: ask the CHECK-IN QUESTIONS from the TEACHING PROTOCOL, celebrate correct answers, correct mistakes using MISCONCEPTION guidance above.';
+      }), charProfile) + '\nCONTEXT: The student already sees a VISUAL ANIMATION. DO NOT re-describe the animation. Your role: ask the CHECK-IN QUESTIONS from the TEACHING PROTOCOL, celebrate correct answers, correct mistakes using MISCONCEPTION guidance above.';
       const phaseInstruction = getPhaseInstruction(pedagogyResult, segment);
       userMsg = phaseInstruction
         ? phaseInstruction + '\n\nStudent just said: ' + message + '\nDeliver your phase instruction now. Follow the rules strictly.'

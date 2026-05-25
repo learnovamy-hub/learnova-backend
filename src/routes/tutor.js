@@ -1314,6 +1314,23 @@ router.get('/standards', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET /api/tutor/content-chunks?subject=...&topic=...
+// Returns concept chunks for the topic intro screen
+router.get('/content-chunks', async (req, res) => {
+  try {
+    const { subject, topic } = req.query;
+    if (!subject || !topic) return res.json({ chunks: [] });
+    const { data } = await supabase
+      .from('concept_chunks')
+      .select('concept_title, concept_explanation, worked_example, common_mistakes, keywords, difficulty_level')
+      .eq('subject', subject)
+      .ilike('topic', '%' + topic + '%')
+      .order('difficulty_level', { ascending: true })
+      .limit(6);
+    return res.json({ chunks: data || [] });
+  } catch (err) { return res.json({ chunks: [] }); }
+});
+
 export default router;
 
 

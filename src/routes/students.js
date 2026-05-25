@@ -246,6 +246,199 @@ router.get('/last-session/:studentId', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/student/id-card
+ * Returns student_code and barcode_url for the logged-in student
+ */
+router.get('/id-card', authMiddleware, async (req, res) => {
+  try {
+    const { data: student, error } = await supabase
+      .from('students')
+      .select('id, name, student_code, barcode_url, form_level')
+      .eq('id', req.user.userId)
+      .maybeSingle();
+    if (error) throw error;
+    res.json({ student });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/student/my-id
+ * Returns student_code and barcode for profile screen.
+ * Generates QR on demand if barcode is missing.
+ */
+router.get('/my-id', authMiddleware, async (req, res) => {
+  try {
+    const { data: student, error } = await supabase
+      .from('students')
+      .select('id, name, student_code, barcode_url, form_level')
+      .eq('id', req.user.userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+
+    // Generate QR if student_code exists but barcode is missing
+    if (student.student_code && !student.barcode_url) {
+      try {
+        const QRCode = await import('qrcode');
+        const barcodeUrl = await QRCode.default.toDataURL(student.student_code, {
+          width: 300, margin: 2,
+          color: { dark: '#1a1a2e', light: '#ffffff' },
+          errorCorrectionLevel: 'M',
+        });
+        await supabase
+          .from('students')
+          .update({ barcode_url: barcodeUrl, barcode_generated_at: new Date().toISOString() })
+          .eq('id', student.id);
+        student.barcode_url = barcodeUrl;
+      } catch (qrErr) {
+        console.error('[StudentID] QR generation failed:', qrErr.message);
+      }
+    }
+
+    return res.json({
+      student_code: student.student_code,
+      barcode_url: student.barcode_url,
+      name: student.name,
+      form: student.form_level,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/student/notifications
+ * Returns notifications for the logged-in student
+ */
+router.get('/notifications', authMiddleware, async (req, res) => {
+  try {
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('recipient_id', req.user.userId)
+      .eq('recipient_type', 'student')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    const unread = (data || []).filter(n => !n.is_read).length;
+    res.json({ notifications: data || [], unread_count: unread });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PATCH /api/student/notifications/read
+ * Mark one or all notifications as read
+ */
+router.patch('/notifications/read', authMiddleware, async (req, res) => {
+  try {
+    const { notification_id } = req.body;
+    const q = supabase.from('notifications').update({ is_read: true }).eq('recipient_id', req.user.userId);
+    if (notification_id) q.eq('id', notification_id);
+    await q;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/student/connection/respond
+ * Student accepts or rejects a parent connection request
+ * Body: { request_id, action: 'accept' | 'reject' }
+ */
+router.post('/connection/respond', authMiddleware, async (req, res) => {
+  try {
+    const { request_id, action } = req.body;
+    if (!['accept', 'reject'].includes(action)) return res.status(400).json({ error: 'Tindakan tidak sah.' });
+
+    const { data: conn } = await supabase
+      .from('parent_student_connections')
+      .select('*')
+      .eq('id', request_id)
+      .eq('student_id', req.user.userId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (!conn) return res.status(404).json({ error: 'Permintaan tidak dijumpai.' });
+
+    const now = new Date().toISOString();
+    const newStatus = action === 'accept' ? 'accepted' : 'rejected';
+    await supabase
+      .from('parent_student_connections')
+      .update({
+        status: newStatus,
+        responded_at: now,
+        ...(action === 'accept' ? { accepted_at: now } : {}),
+      })
+      .eq('id', request_id);
+
+    if (action === 'accept') {
+      await supabase.from('notifications').insert({
+        recipient_id: conn.parent_id,
+        recipient_type: 'parent',
+        type: 'connection_accepted',
+        title: 'Permintaan Diterima',
+        message: 'Pelajar telah menerima permintaan sambungan kamu. Kamu kini boleh memantau pembelajaran mereka.',
+        data: { student_id: req.user.userId, request_id },
+      });
+    } else {
+      await supabase.from('notifications').insert({
+        recipient_id: conn.parent_id,
+        recipient_type: 'parent',
+        type: 'connection_rejected',
+        title: 'Permintaan Ditolak',
+        message: 'Pelajar telah menolak permintaan sambungan kamu.',
+        data: { request_id },
+      });
+    }
+
+    await supabase
+      .from('notifications')
+      .update({ is_read: true, action_taken: true })
+      .eq('recipient_id', req.user.userId)
+      .eq('type', 'connection_request')
+      .eq('is_read', false);
+
+    return res.json({
+      success: true,
+      action,
+      message: action === 'accept'
+        ? 'Sambungan diterima. Ibu bapa kamu kini boleh melihat kemajuan pembelajaran kamu.'
+        : 'Permintaan sambungan ditolak.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Topic read tracking ─────────────────────────────────────────────────────
+// POST /api/student/topic-read  { student_id, subject, topic }
+// No auth required (student_id passed in body for web clients without Bearer token)
+router.post('/topic-read', async (req, res) => {
+  try {
+    const { student_id, subject, topic } = req.body;
+    if (!student_id || !subject || !topic) return res.json({ success: false });
+
+    await supabase.from('student_mastery').upsert({
+      student_id,
+      subject,
+      topic,
+      intro_read: true,
+      intro_read_at: new Date().toISOString(),
+    }, { onConflict: 'student_id,subject,topic', ignoreDuplicates: false });
+
+    return res.json({ success: true });
+  } catch (err) {
+    // Silently succeed — missing columns or table just means tracking not ready yet
+    return res.json({ success: false, reason: err.message });
+  }
+});
+
 export default router;
 
 

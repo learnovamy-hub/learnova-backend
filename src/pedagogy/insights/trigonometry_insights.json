@@ -1,0 +1,125 @@
+{
+  "topic": "Trigonometry (0° to 360°)",
+  "subject": "Mathematics",
+  "form_level": 5,
+  "teacher": "Miss Joanna",
+  "source": "Real SPM classroom transcript",
+  "extracted_at": "2026-05-13",
+
+  "opening_hook": "Start by asking what students remember about SOH CAH TOA from Form 4 — connect the new (full circle trig) to something they already know (right-angle triangles). Never start with theory.",
+
+  "key_mnemonic": {
+    "text": "All Science Teacher Crazy (or: All Students Totally Crazy)",
+    "mapping": {
+      "Q1": "All — ALL are positive (sin, cos, tan)",
+      "Q2": "S — SIN only is positive",
+      "Q3": "T — TAN only is positive",
+      "Q4": "C — COS only is positive"
+    },
+    "teaching_tip": "Let students create their own version. Miss Joanna's class came up with 'All Students Totally Crazy' — accept student contributions, it increases ownership."
+  },
+
+  "core_concept": {
+    "reference_angle_rule": "The basic angle (reference angle) is ALWAYS measured from the x-axis, NOT the y-axis. This is the most common student error. Repeat this warning explicitly.",
+    "reference_angle_range": "Always between 0° and 90°",
+    "calculator_rule": "When finding the basic angle — NEVER enter the negative sign. Strip negative, use positive value in shift-sin / shift-cos / shift-tan. Calculator always returns a positive angle."
+  },
+
+  "three_step_procedure": [
+    "Step 1: Determine which quadrant(s) — use ASTC and whether the trig value is positive or negative. Positive value → quadrants where that ratio is positive. Negative value → the other two quadrants.",
+    "Step 2: Find the basic (reference) angle — use the positive value in calculator (shift+sin/cos/tan). Result is between 0° and 90°.",
+    "Step 3: Apply the quadrant formulas to get final angle(s)."
+  ],
+
+  "quadrant_formulas": {
+    "Q1": "θ = basic angle",
+    "Q2": "θ = 180° − basic angle",
+    "Q3": "θ = 180° + basic angle",
+    "Q4": "θ = 360° − basic angle"
+  },
+
+  "teaching_phases": [
+    {
+      "phase": 1,
+      "name": "Activate Prior Knowledge",
+      "goal": "Connect to Form 4 SOH CAH TOA",
+      "approach": "Ask what they remember. Do not lecture. Let them speak first.",
+      "check_in": "Who can tell me what sin, cos, tan mean from Form 4?"
+    },
+    {
+      "phase": 2,
+      "name": "Introduce the ASTC Rule",
+      "goal": "Student memorises which ratios are positive in each quadrant",
+      "approach": "Teach the mnemonic. Have students repeat it aloud. Let them propose alternatives.",
+      "check_in": "In which quadrant is only tan positive?"
+    },
+    {
+      "phase": 3,
+      "name": "Teach Reference Angle",
+      "goal": "Student can find the basic angle using calculator correctly",
+      "approach": "Demonstrate with a worked example. Warn explicitly about x-axis (not y-axis) and no negatives in calculator.",
+      "check_in": "If sin θ = 0.5, what do you press in your calculator to find the basic angle?"
+    },
+    {
+      "phase": 4,
+      "name": "Apply Quadrant Formulas",
+      "goal": "Student can calculate all valid angles for 0°–360°",
+      "approach": "Show Q2 and Q4 formulas with the worked example. Then give a negative-value example (tan θ = −√3) for negative case.",
+      "check_in": "If cos is negative, which quadrants do we use?"
+    },
+    {
+      "phase": 5,
+      "name": "Real-World Application",
+      "goal": "Student sees trig used in a practical context",
+      "approach": "Coconut tree problem — identify opposite/adjacent, choose tan ratio, find angle.",
+      "check_in": "What trig ratio uses opposite and adjacent?"
+    }
+  ],
+
+  "common_mistakes": [
+    {
+      "mistake": "Measuring reference angle from y-axis instead of x-axis",
+      "correction": "Always stick to the x-axis. The reference angle is between the terminal side and the x-axis, never the y-axis."
+    },
+    {
+      "mistake": "Entering negative value in calculator when finding reference angle",
+      "correction": "Strip the negative sign first. Use shift-sin(|value|), shift-cos(|value|), or shift-tan(|value|). The basic angle is always positive."
+    },
+    {
+      "mistake": "Only finding one angle when two are required",
+      "correction": "Check how many quadrants apply. If the ratio is positive, two quadrants have it positive. If negative, two quadrants have it negative. Usually two answers."
+    },
+    {
+      "mistake": "Using wrong quadrant formula (e.g., 360 − basic instead of 180 − basic for Q2)",
+      "correction": "Memorise: Q1=θ, Q2=180−θ, Q3=180+θ, Q4=360−θ. Write them on the exam paper margin if allowed."
+    }
+  ],
+
+  "worked_example": {
+    "problem": "Find all angles θ where 0° ≤ θ ≤ 360° such that tan θ = −√3",
+    "solution_steps": [
+      "Step 1: tan is negative → use quadrants where tan is negative → Q2 and Q4 (ASTC: tan positive in Q1, Q3 → negative in Q2, Q4)",
+      "Step 2: Basic angle = tan⁻¹(√3) = 60° (use positive value in calculator)",
+      "Step 3: Q2 angle = 180° − 60° = 120°; Q4 angle = 360° − 60° = 300°",
+      "Answer: θ = 120° or θ = 300°"
+    ]
+  },
+
+  "difficulty_progression": [
+    "Level 1: sin θ = 0.5 (positive value, find two angles in Q1 and Q2)",
+    "Level 2: cos θ = −0.6 (negative value, identify correct quadrants first)",
+    "Level 3: tan θ = −√3 (negative, exact value, requires recognising special angle)",
+    "Level 4: real-world geometry problem where angle must first be identified from context"
+  ],
+
+  "socratic_style_notes": [
+    "Ask before explaining — never dump content first",
+    "Frequently say 'Correct?' after each step to get student confirmation",
+    "Pick specific values and ask students to classify them",
+    "Accept and amplify student contributions (e.g., accepting 'All Students Totally Crazy')",
+    "Use local Manglish: 'ya', 'correct?', 'you all', 'lah' when appropriate — it creates warmth and familiarity",
+    "Warn explicitly about common errors BEFORE students make them, not after"
+  ],
+
+  "summary_prompt": "Ask student to recite the three steps and the ASTC rule from memory before ending the session. Do not proceed to practice questions until they can verbalise the steps."
+}

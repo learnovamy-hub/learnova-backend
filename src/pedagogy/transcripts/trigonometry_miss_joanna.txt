@@ -1,0 +1,110 @@
+SPM Form 5 Mathematics — Trigonometry (0° to 360°)
+Teacher: Miss Joanna
+Source: Real classroom transcript, incorporated for Learnova AI pedagogy
+
+=============================================================
+TRANSCRIPT
+=============================================================
+
+Miss Joanna: Okay class, today we are going to do Trigonometry — the chapter about angles from 0 degrees all the way to 360 degrees. Who can tell me, from Form 4, what is sin, cos, tan? Anyone?
+
+[Students murmur]
+
+Miss Joanna: Okay, no worries. Let me remind you. In Form 4 we only did right-angle triangles, right? The triangle had sides — opposite, adjacent, hypotenuse. Sin was opposite over hypotenuse, cos was adjacent over hypotenuse, tan was opposite over adjacent. Everyone still remember? SOH CAH TOA, yes?
+
+Students: Yes...
+
+Miss Joanna: Good. Now in Form 5, the difference is — we are not just talking about one triangle anymore. We are talking about angles in a full circle. 0 degrees all the way to 360 degrees. The angle can be in any of the four quadrants. You know quadrant? Like four boxes, correct?
+
+Student: Yes teacher, Q1, Q2, Q3, Q4.
+
+Miss Joanna: Correct! Now the important thing — in each quadrant, sin, cos, and tan can be positive OR negative. This is the tricky part. Who knows which one is positive in each quadrant?
+
+[No answer]
+
+Miss Joanna: Okay, let me give you a mnemonic. A mnemonic is like a memory trick. The trick is: All Science Teacher Crazy. Can you all repeat? All Science Teacher Crazy.
+
+Students: All Science Teacher Crazy!
+
+Miss Joanna: Good! Now what does it mean? A — All. This means in Quadrant 1, ALL of them are positive. Sin positive, cos positive, tan positive. S — Science, which starts with S, so Sin. In Quadrant 2, only SIN is positive. T — Teacher, starts with T, so Tan. In Quadrant 3, only TAN is positive. C — Crazy, starts with C, so Cos. In Quadrant 4, only COS is positive.
+
+Got it? All, Sin, Tan, Cos. One more time — All Science Teacher Crazy!
+
+Students: All Science Teacher Crazy!
+
+Student A: Teacher, I have one also — All Students Totally Crazy!
+
+Miss Joanna: Haha, yes that works too! All Students Totally Crazy — All, Students=Sin, Totally=Tan, Crazy=Cos. Perfect! Use whichever one you can remember better. The important thing is you remember the pattern: All, Sin, Tan, Cos, going from Q1 to Q4.
+
+Miss Joanna: Okay, now let us talk about how to FIND the angle. There are two important steps. First — you need to find what we call the BASIC ANGLE or REFERENCE ANGLE. This is the angle measured from the x-axis. Very important — from the x-axis, NOT the y-axis. Students always make the mistake of measuring from the y-axis. Do not do that. Always stick to the x-axis.
+
+Miss Joanna: Let me show you. If I say sin θ = 0.5, how do I find θ? First step — ignore the negative sign if there is one. Just use the positive value. So sin⁻¹(0.5). What do you get?
+
+Student: 30 degrees, teacher.
+
+Miss Joanna: Good! 30 degrees is your basic angle. Your reference angle. It is always between 0 and 90 degrees. Now — second step. Use the ASTC rule to find which quadrants give you sin positive. Sin is positive in which quadrants?
+
+Students: Q1 and Q2!
+
+Miss Joanna: Correct! So we have TWO answers. In Q1 — the angle is just the basic angle. So 30 degrees. In Q2 — the formula is 180 minus the basic angle. So 180 minus 30 equals 150 degrees. Therefore θ is 30 degrees or 150 degrees.
+
+Miss Joanna: Let me show the formulas for each quadrant clearly:
+- Quadrant 1: θ = basic angle
+- Quadrant 2: θ = 180° − basic angle
+- Quadrant 3: θ = 180° + basic angle
+- Quadrant 4: θ = 360° − basic angle
+
+These four formulas you MUST memorize. Write them down. They appear every year in SPM.
+
+Miss Joanna: Now — the CALCULATOR technique. Very important. When you press shift-sin or shift-cos or shift-tan to find the basic angle — you NEVER put the negative number in. If the question gives you cos θ = −0.6, do NOT press shift-cos (−0.6). Press shift-cos (0.6). Just use the positive value. The calculator will always give you a positive angle between 0 and 90. That is your basic angle. Then you use the ASTC rule and the quadrant formulas to find the actual angles.
+
+Miss Joanna: Common mistake — students see negative value, they put negative in calculator, they get a weird number. Do not do that. Strip the negative, find basic angle, then use the formulas.
+
+Miss Joanna: Let me give you a harder one. Tan θ = −√3 for 0° ≤ θ ≤ 360°. Step 1 — basic angle. Tan⁻¹(√3) — ignore the negative. What is tan⁻¹ of √3?
+
+Student: 60 degrees, teacher.
+
+Miss Joanna: Yes! 60 degrees is the basic angle. Step 2 — ASTC. Tan is positive in Q1 and Q3. But our value is NEGATIVE. So tan is negative in which quadrants?
+
+Students: Q2 and Q4!
+
+Miss Joanna: Exactly! Tan is positive in Q1 and Q3, so tan is NEGATIVE in Q2 and Q4. So our answers come from Q2 and Q4.
+- Q2: 180 − 60 = 120 degrees
+- Q4: 360 − 60 = 300 degrees
+
+So θ = 120° or 300°. Correct?
+
+Students: Yes, teacher!
+
+Miss Joanna: Okay, now let us do a real-world problem. This is from a past SPM paper. There is a coconut tree. The tree is 12 metres tall. A rope is tied from the top of the tree to the ground. The rope makes an angle θ with the ground. The distance from the base of the tree to where the rope meets the ground is 5 metres. Find θ.
+
+Miss Joanna: So what do we have here? We have a right-angle triangle. The tree is the opposite side — 12 metres. The ground distance is the adjacent side — 5 metres. What ratio uses opposite and adjacent?
+
+Student: Tan!
+
+Miss Joanna: Good! Tan θ = opposite over adjacent = 12 over 5 = 2.4. So θ = tan⁻¹(2.4). Use your calculator. What do you get?
+
+Student: 67.38 degrees, teacher.
+
+Miss Joanna: Correct! 67.38 degrees. Now in this problem, they asked for an acute angle only, so we only need one answer. But in the standard Form 5 questions, they usually ask for ALL angles between 0 and 360. Remember — always check the question to know if they want all solutions or just one.
+
+Miss Joanna: Let me summarize what we learned today. Three steps for any trig problem:
+Step 1 — Find which quadrant. Use ASTC and whether the value is positive or negative.
+Step 2 — Find the basic angle. Always use the POSITIVE value in your calculator. Basic angle is always between 0 and 90 degrees.
+Step 3 — Apply the quadrant formulas. Q1 = basic angle, Q2 = 180 minus, Q3 = 180 plus, Q4 = 360 minus.
+
+Miss Joanna: Remember — always measure from the x-axis, not the y-axis. And never put negative in your calculator when finding the basic angle.
+
+Any questions?
+
+Student B: Teacher, what if the question says the angle is between 0 and 2π? Is that the same?
+
+Miss Joanna: Good question! Yes, that is in radians. 2π radians is the same as 360 degrees. If you see π in the question, they want the answer in radians. We will cover that conversion next lesson. For now, focus on the degree version. Correct?
+
+Students: Yes, teacher!
+
+Miss Joanna: Okay, take out your exercise book. I want you to try these three questions on your own. Then we check together.
+
+=============================================================
+END OF TRANSCRIPT
+=============================================================

@@ -5,9 +5,14 @@ import { authMiddleware } from '../config/auth.js';
 import { SUBJECT_PRICES_MYR, ALL_SUBJECTS, ALWAYS_FREE } from '../config/subjectAccess.js';
 
 const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const APP_URL = process.env.APP_URL || 'https://learnova.optimus.com.my';
+
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error('STRIPE_SECRET_KEY not configured');
+  return new Stripe(key);
+}
 
 // GET /api/payment/plans — return plan info for Flutter UI
 router.get('/plans', (req, res) => {
@@ -95,7 +100,7 @@ router.post('/create-checkout', authMiddleware, async (req, res) => {
     const amount = plans[plan];
     const subjectList = plan === 'bundleAll' ? ALL_SUBJECTS.filter(s => !ALWAYS_FREE.includes(s)) : subjects;
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
@@ -142,7 +147,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   const sig = req.headers['stripe-signature'];
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(req.body, sig, WEBHOOK_SECRET);
   } catch (err) {
     console.error('[Payment] Webhook signature failed:', err.message);
     return res.status(400).json({ error: err.message });

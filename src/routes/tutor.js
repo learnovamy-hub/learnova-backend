@@ -239,6 +239,12 @@ TEACHING STYLE - THESE RULES ARE ABSOLUTE AND CANNOT BE OVERRIDDEN:
 - Be warm, encouraging, and patient like a favourite teacher sitting next to the student.
 `.trim();
 
+const TOPIC_ANCHOR = (subject, topic) => `ABSOLUTE RULE — YOU ARE TEACHING: ${subject} — ${topic}
+You must ONLY teach content related to "${topic}" in ${subject}.
+If the student asks about anything else, acknowledge briefly and redirect back to "${topic}".
+NEVER introduce a new topic. NEVER ask what they want to learn. NEVER restart the session.
+You are mid-session. The student has already chosen their topic.`.trim();
+
 // ─── Strip LaTeX from math text (AI sometimes outputs LaTeX despite instructions) ───
 function cleanMathText(text) {
   if (!text || typeof text !== 'string') return text;
@@ -654,7 +660,9 @@ const DEFAULT_TEACHING_SEQUENCE = [
 function getPhaseInstruction(pedagogyResult, segment) {
   const pj = pedagogyResult?.pedagogy_json;
   const sequence = (pj?.teaching_sequence && pj.teaching_sequence.length) ? pj.teaching_sequence : DEFAULT_TEACHING_SEQUENCE;
-  const phaseIdx = Math.min(segment, sequence.length - 1);
+  const phaseIdx = segment < sequence.length
+    ? segment
+    : ((segment - sequence.length) % 2) + 2; // cycle phases 3-4 after completion
   const phase = sequence[phaseIdx];
   if (!phase) return null;
   const lines = [];
@@ -820,12 +828,17 @@ function bumpCacheHit(cacheId) {
 }
 
 async function detectTopicSwitch(message, currentTopic, subject) {
+  if (!message || message.length < 20) return null;
   const msgLower = message.toLowerCase();
   const switchKeywords = [
-    'want to learn', 'want to study', 'can we do', 'can we learn', 'can we study',
-    'today we did', 'teacher taught', 'school taught', 'we learned', 'we studied',
-    'switch to', 'change to', "let's do", 'lets do', 'i need help with',
-    'can you teach me', 'teach me about'
+    'want to switch to',
+    'change topic to',
+    'can we switch to',
+    "let's do a different topic",
+    'boleh tukar topik',
+    'nak belajar topik lain',
+    'switch to',
+    'tukar ke',
   ];
   const hasSwitchIntent = switchKeywords.some(function(kw) { return msgLower.includes(kw); });
   if (!hasSwitchIntent) return null;
@@ -1202,7 +1215,7 @@ router.post('/session', async (req, res) => {
 
     if (studentConfused) {
       // Confusion protocol -- fresh angle, use a memory anchor or analogy
-      system = withCharacter(buildMasterSystemPrompt({
+      system = TOPIC_ANCHOR(subject, topic) + '\n\n' + withCharacter(buildMasterSystemPrompt({
         role: 'a patient SPM ' + subject + ' tutor. The student is confused about "' + topic + '"',
         subject, topic, standardContext,
         pedagogy: pedagogyResult, anchors, misconceptions, personality: effectivePersonality,
@@ -1218,7 +1231,7 @@ router.post('/session', async (req, res) => {
       userMsg = 'Student is confused and said: "' + correctedMsg + '"\n\n'
         + 'Use a completely fresh angle -- try a memory anchor, analogy, or the smallest possible step from the TEACHING PROTOCOL. 2 sentences max, then one simple question.';
     } else {
-      system = withCharacter(buildMasterSystemPrompt({
+      system = TOPIC_ANCHOR(subject, topic) + '\n\n' + withCharacter(buildMasterSystemPrompt({
         role: 'a warm, friendly SPM ' + subject + ' tutor guiding a student through "' + topic + '"',
         subject, topic, standardContext,
         pedagogy: pedagogyResult, anchors, misconceptions, personality: effectivePersonality,

@@ -108,6 +108,23 @@ async function logConversation({
   }
 }
 
+// ── Activity logger (fire-and-forget, never blocks response) ─────────────────
+async function logActivity(studentId, sessionId, activityType, data = {}) {
+  try {
+    await supabase.from('student_activities').insert({
+      student_id: studentId || null,
+      session_id: sessionId || null,
+      activity_type: activityType,
+      subject: data.subject || null,
+      topic: data.topic || null,
+      data,
+      created_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error('[Activity] Log failed:', e.message);
+  }
+}
+
 // ── Session end signals ───────────────────────────────────────────────────────
 const END_SIGNALS = ['done', 'habis', "that's all", 'stop', 'sudah', 'cukup', 'bye', 'terima kasih', 'thank you', 'ok dah', 'dah habis', 'nak berhenti', 'selesai'];
 
@@ -933,6 +950,9 @@ router.post('/session', async (req, res) => {
         subject, topic, form: studentFormLevel,
         role: 'student', message, messageType: 'text',
       });
+      logActivity(student_id, effectiveSessionId, 'message_sent', {
+        subject, topic, segment, phase, message_length: correctedMsg.length,
+      });
     }
 
     // Load content + all pedagogy intelligence layers in parallel
@@ -952,6 +972,13 @@ router.post('/session', async (req, res) => {
     const totalStandards = standards.length;
     const teachingStrategy = selectTeachingStrategy(pedagogyResult?.pedagogy_type || []);
 
+    // Topic completion marker (fire-and-forget)
+    if (message !== 'start' && totalStandards > 0 && segment >= totalStandards) {
+      logActivity(student_id, effectiveSessionId, 'topic_completed', {
+        subject, topic, segments_completed: segment,
+      });
+    }
+
     const standardsProgress = currentStandard
       ? 'Standard ' + currentStandard.code + ' (' + (segment + 1) + ' of ' + totalStandards + ')'
       : null;
@@ -964,6 +991,11 @@ router.post('/session', async (req, res) => {
 
     // â"€â"€ INTRO: one conversational question, no content dump â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if (message === 'start' || phase === 'intro') {
+      if (message === 'start') {
+        logActivity(student_id, effectiveSessionId, 'session_start', {
+          subject, topic, country, character: character || 'nova',
+        });
+      }
       const pj = pedagogyResult?.pedagogy_json;
       const introHook = pj?.opening_hook
         ? ' Your opening strategy: ' + pj.opening_hook
@@ -1022,6 +1054,10 @@ router.post('/session', async (req, res) => {
       const q = activeQuestion;
       const studentAns = message.trim().toUpperCase().charAt(0);
       const correct = studentAns === (q.correct_answer || '').toUpperCase();
+      logActivity(student_id, effectiveSessionId, 'quiz_attempted', {
+        subject, topic, correct,
+        student_answer: studentAns, correct_answer: q.correct_answer,
+      });
       const nextStandard = getStandardForSegment(standards, segment + 1);
 
       if (correct) {
@@ -1057,6 +1093,9 @@ router.post('/session', async (req, res) => {
     const wantsToEnd = message !== 'start' && END_SIGNALS.some(s => msgLower.includes(s));
 
     if (wantsToEnd && topic) {
+      logActivity(student_id, effectiveSessionId, 'session_end', {
+        subject, topic, segment, phase,
+      });
       // Check session duration from session_events
       let sessionMinutes = 0;
       try {

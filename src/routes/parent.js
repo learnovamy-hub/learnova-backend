@@ -413,6 +413,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         { data: prevSumm },
         { data: mastery },
         { data: quizRes },
+        { data: recentActivities },
       ] = await Promise.all([
         supabase.from('session_logs').select('duration_minutes, offtopic_count, created_at').eq('student_id', sid).gte('created_at', since30d).order('created_at', { ascending: false }).limit(200),
         supabase.from('session_summary').select('subject, topics_covered, session_duration_minutes, quiz_attempted, quiz_correct, quiz_score_percent, weak_topics, strong_topics, session_date, created_at').eq('student_id', sid).order('session_date', { ascending: false }).limit(60),
@@ -420,6 +421,7 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         supabase.from('session_summary').select('subject, quiz_score_percent').eq('student_id', sid).lt('session_date', since14d).gte('session_date', since30d),
         supabase.from('student_mastery').select('subject, topic, mastery_score, updated_at').eq('student_id', sid).order('updated_at', { ascending: false }).limit(40),
         supabase.from('quiz_results').select('subject, topic, score, total, percentage, created_at').eq('student_id', sid).order('created_at', { ascending: false }).limit(20),
+        supabase.from('student_activities').select('activity_type, subject, topic, data, created_at').eq('student_id', sid).gte('created_at', since7d).order('created_at', { ascending: false }).limit(50),
       ]);
 
       // Section 1: Overview
@@ -530,6 +532,9 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         wellbeing:{ confidence_trend:confTrend, mastery_avg:masteryAvg, low_mastery_topics:lowTopics },
         total_sessions:(sessions||[]).length, total_study_minutes:totalStudyMins,
         sessions_this_week:sessWeek, avg_score:avgScore,
+        recent_activities: recentActivities || [],
+        topics_this_week: [...new Set((recentActivities||[]).filter(a=>a.activity_type==='session_start'&&a.topic).map(a=>a.topic))].slice(0,10),
+        quiz_accuracy_this_week: (() => { const q=(recentActivities||[]).filter(a=>a.activity_type==='quiz_attempted'); if(!q.length) return null; return Math.round((q.filter(a=>a.data?.correct).length/q.length)*100); })(),
         _recs:{ name:st.name, subjects:subject_performance.map(sp=>sp.subject), avg_score:avgScore, weak_topics:allWeak, strong_topics:allStrong, sessions_this_week:sessWeek, streak },
       };
     }));

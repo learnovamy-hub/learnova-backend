@@ -439,6 +439,76 @@ router.post('/topic-read', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/student/activity-summary
+ * Returns aggregated activity stats for the last N days
+ */
+router.get('/activity-summary', authMiddleware, async (req, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const studentId = req.user.userId;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: activities } = await supabase
+      .from('student_activities')
+      .select('*')
+      .eq('student_id', studentId)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false });
+
+    if (!activities || activities.length === 0) {
+      return res.json({ summary: {}, subjects: [], topics_studied: [], daily_activity: [], recent_activities: [] });
+    }
+
+    const sessions     = activities.filter(a => a.activity_type === 'session_start');
+    const messages     = activities.filter(a => a.activity_type === 'message_sent');
+    const quizzes      = activities.filter(a => a.activity_type === 'quiz_attempted');
+    const completions  = activities.filter(a => a.activity_type === 'topic_completed');
+    const correctCount = quizzes.filter(a => a.data?.correct).length;
+
+    const topicsStudied = [...new Set(sessions.map(a => a.topic).filter(Boolean))];
+
+    const subjectMap = {};
+    sessions.forEach(a => {
+      if (a.subject) subjectMap[a.subject] = (subjectMap[a.subject] || 0) + 1;
+    });
+
+    const dailyMap = {};
+    activities.forEach(a => {
+      const day = a.created_at.substring(0, 10);
+      dailyMap[day] = (dailyMap[day] || 0) + 1;
+    });
+
+    // Study streak
+    let streak = 0;
+    const studyDays = Object.keys(dailyMap).sort().reverse();
+    for (const day of studyDays) {
+      const expected = new Date(Date.now() - streak * 86400000).toISOString().substring(0, 10);
+      if (day === expected) streak++;
+      else break;
+    }
+
+    res.json({
+      summary: {
+        total_sessions: sessions.length,
+        total_messages: messages.length,
+        topics_completed: completions.length,
+        topics_studied: topicsStudied.length,
+        quiz_attempts: quizzes.length,
+        quiz_accuracy: quizzes.length > 0 ? Math.round((correctCount / quizzes.length) * 100) : 0,
+        study_streak: streak,
+        days_active: Object.keys(dailyMap).length,
+      },
+      subjects: Object.entries(subjectMap).map(([subject, count]) => ({ subject, sessions: count })),
+      topics_studied: topicsStudied,
+      daily_activity: Object.entries(dailyMap).map(([date, count]) => ({ date, count })),
+      recent_activities: activities.slice(0, 20),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
 
 
